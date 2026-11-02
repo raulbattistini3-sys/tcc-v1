@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adaptive Scheduler Lab</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./main.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Adaptive scheduler lab</h1>
+      <p id="status" class="muted">Loading data…</p>
+    </header>
+
+    <section class="jank" aria-label="Main-thread responsiveness">
+      <div class="track"><div id="ball" class="ball"></div></div>
+      <span id="fps" class="mono">– fps</span>
+      <span id="dropped" class="mono">0 long frames</span>
+    </section>
+
+    <section class="controls">
+      <label>Rows
+        <select id="rows">
+          <option>1000</option><option>10000</option><option>50000</option>
+          <option selected>100000</option><option>250000</option><option>600034</option>
+        </select>
+      </label>
+      <label>Strategy
+        <select id="strategy">
+          <option value="adaptive" selected>adaptive</option>
+          <option value="main">always main</option>
+          <option value="worker">always worker</option>
+          <option value="fixed">fixed threshold (50k)</option>
+        </select>
+      </label>
+      <label>Filter
+        <select id="filterCol">
+          <option value="name">name</option><option value="sku">sku</option><option value="categoria">categoria</option>
+        </select>
+        <input id="filter" type="search" placeholder="contains…" autocomplete="off" />
+      </label>
+      <label>Comparator
+        <select id="comparator"><option value="auto">code / number</option><option value="locale">locale (naive)</option></select>
+      </label>
+      <label>Background load
+        <select id="load">
+          <option value="0">none</option><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="panels">
+      <div class="panel">
+        <h2>Last run</h2>
+        <dl id="last" class="kv"></dl>
+      </div>
+      <div class="panel">
+        <h2>Model</h2>
+        <dl id="model" class="kv"></dl>
+      </div>
+      <div class="panel">
+        <h2>Benchmark</h2>
+        <label>Device label <input id="device" value="laptop" /></label>
+        <label>Throttling <input id="throttle" value="1x" title="Set it in DevTools → Performance, then type it here" /></label>
+        <label>Commit <input id="commit" value="dev" /></label>
+        <label>Reps <input id="reps" type="number" min="1" max="20" value="5" /></label>
+        <div class="row">
+          <button id="bench">Run sweep</button>
+          <button id="csv" disabled>Download CSV</button>
+          <button id="telemetry">Telemetry JSON</button>
+        </div>
+        <p id="benchStatus" class="muted"></p>
+      </div>
+    </section>
+
+    <section class="table" aria-label="Produtos">
+      <div id="thead" class="thead"></div>
+      <div id="viewport" class="viewport"><div id="spacer" class="spacer"></div><div id="tbody" class="tbody"></div></div>
+    </section>
+  </body>
+</html>
