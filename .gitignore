@@ -1,0 +1,7 @@
+node_modules/
+data/
+additional-scripts/pgcopy/target/
+additional-scripts/pgcopy/export/*.csv
+additional-scripts/pgcopy/export/*.json
+additional-scripts/pgcopy/export/*.zip
+*.log

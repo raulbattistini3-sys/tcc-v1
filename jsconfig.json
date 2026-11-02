@@ -1,0 +1,17 @@
+{
+  // Type-checks the JSDoc in plain .js files. No .ts sources, no build step:
+  // `npm run check` only reports errors, it emits nothing.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.js", "demo/**/*.js", "extension/**/*.js"]
+}

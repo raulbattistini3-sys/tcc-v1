@@ -1,0 +1,21 @@
+{
+  "name": "tcc-adaptive-scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Telemetry-driven main-thread vs Web Worker scheduler for client-side table computation, plus a WebExtension that collects its telemetry.",
+  "scripts": {
+    "data": "node --max-old-space-size=4096 tools/build-columnar.mjs",
+    "data:small": "node --max-old-space-size=4096 tools/build-columnar.mjs additional-scripts/pgcopy/export/compact.zip data/produtos-50k.bin --limit 50000",
+    "serve": "node tools/serve.mjs",
+    "serve:strict": "node tools/serve.mjs --csp strict",
+    "serve:no-worker": "node tools/serve.mjs --csp no-worker",
+    "serve:coi": "node tools/serve.mjs --coi --csp strict",
+    "test": "node --test \"test/*.test.js\"",
+    "check": "tsc -p jsconfig.json"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "typescript": "^5.6.3"
+  }
+}
