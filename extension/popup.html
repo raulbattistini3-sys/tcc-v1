@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scheduler Telemetry</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <h1>Scheduler telemetry</h1>
+    <p id="page" class="muted"></p>
+    <h2>Main-thread blocking by script origin</h2>
+    <table id="attribution"></table>
+    <h2>Events</h2>
+    <table id="counts"></table>
+    <h2>Recent decisions</h2>
+    <table id="decisions"></table>
+    <div class="row">
+      <button id="refresh">Refresh</button>
+      <button id="export">Export JSON</button>
+      <button id="clear">Clear</button>
+    </div>
+  </body>
+</html>

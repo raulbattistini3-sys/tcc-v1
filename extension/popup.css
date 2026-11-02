@@ -1,0 +1,11 @@
+:root { color-scheme: light dark; --muted: #777; --line: #ddd; }
+@media (prefers-color-scheme: dark) { :root { --line: #444; --muted: #aaa; } }
+body { width: 420px; margin: 0; padding: 12px; font: 12px/1.4 system-ui, sans-serif; }
+h1 { font-size: 15px; margin: 0 0 2px; }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 12px 0 4px; }
+.muted { color: var(--muted); margin: 0; word-break: break-all; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+td, th { padding: 2px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+td.num, th.num { text-align: right; }
+.row { display: flex; gap: 8px; margin-top: 12px; }
+button { font: inherit; padding: 4px 10px; }
