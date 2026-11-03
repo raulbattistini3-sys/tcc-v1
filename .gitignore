@@ -11,3 +11,7 @@ apps/*/dist/
 apps/*/dist-zone/
 apps/*/.angular/
 apps/*/out-tsc/
+
+# harness
+harness/target/
+results/
