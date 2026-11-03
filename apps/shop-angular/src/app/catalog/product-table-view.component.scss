@@ -1,0 +1,52 @@
+@use "tokens" as t;
+
+:host {
+  display: block;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: var(--mat-sys-surface);
+}
+
+th,
+td {
+  padding: 6px t.$space * 2;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  font-weight: 500;
+}
+
+tbody tr:hover {
+  background: var(--mat-sys-surface-container-low);
+}
+
+.right {
+  text-align: right;
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inactive {
+  opacity: 0;
+}
+
+.sort:hover .inactive {
+  opacity: 0.4;
+}

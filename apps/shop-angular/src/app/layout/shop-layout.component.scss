@@ -1,0 +1,45 @@
+@use "tokens" as t;
+
+:host(.shell) {
+  @include t.shell;
+}
+
+:host(.no-sidebar) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "header" "main" "footer";
+}
+
+.header {
+  grid-area: header;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid rgb(0 0 0 / 0.08);
+  padding: t.$space * 2;
+  overflow-y: auto;
+  position: sticky;
+  top: t.$header-height;
+  height: calc(100vh - #{t.$header-height});
+
+  @include t.below(t.$bp-md) {
+    display: none;
+  }
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+  padding: t.$space * 2;
+}
+
+.footer {
+  grid-area: footer;
+}

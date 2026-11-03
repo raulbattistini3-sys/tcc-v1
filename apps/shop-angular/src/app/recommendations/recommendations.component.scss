@@ -1,0 +1,47 @@
+@use "tokens" as t;
+
+:host {
+  display: block;
+  margin-bottom: t.$space * 3;
+}
+
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 t.$space;
+}
+
+.viewport {
+  overflow: hidden;
+}
+
+.track {
+  @include t.carousel-track;
+}
+
+.item {
+  flex: 0 0 160px;
+  overflow: hidden;
+}
+
+img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+}
+
+.body {
+  padding: t.$space;
+}
+
+.name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price {
+  font-size: 14px;
+  font-weight: 600;
+}

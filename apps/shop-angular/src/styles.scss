@@ -1,0 +1,38 @@
+@use "@angular/material" as mat;
+@use "tokens" as t;
+
+// M3 theme from the same brand tokens the React shop gives MUI.
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$blue-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: (
+        plain-family: t.$font,
+        brand-family: t.$font,
+      ),
+      density: 0,
+    )
+  );
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: t.$brand,
+      container-text-color: #fff,
+    )
+  );
+  @include mat.badge-overrides(
+    (
+      background-color: t.$accent,
+    )
+  );
+}
+
+body {
+  margin: 0;
+  background: t.$surface;
+  font-family: t.$font;
+  color: var(--mat-sys-on-surface);
+}
