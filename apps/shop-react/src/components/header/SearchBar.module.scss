@@ -1,0 +1,21 @@
+@use "@shared/styles/tokens" as t;
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: t.$space;
+  padding: 0 t.$space * 1.5;
+  height: 40px;
+  border-radius: t.$radius;
+  background: rgb(255 255 255 / 0.16);
+  color: inherit;
+
+  &:focus-within {
+    background: rgb(255 255 255 / 0.26);
+  }
+}
+
+.input {
+  flex: 1;
+  color: inherit !important;
+}

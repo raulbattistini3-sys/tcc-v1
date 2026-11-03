@@ -1,0 +1,17 @@
+@use "@shared/styles/tokens" as t;
+
+.strip {
+  margin-bottom: t.$space * 3;
+}
+
+.viewport {
+  overflow: hidden;
+}
+
+.track {
+  @include t.carousel-track;
+}
+
+.item {
+  flex: 0 0 160px;
+}
