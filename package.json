@@ -12,7 +12,12 @@
     "serve:no-worker": "node tools/serve.mjs --csp no-worker",
     "serve:coi": "node tools/serve.mjs --coi --csp strict",
     "test": "node --test \"test/*.test.js\"",
-    "check": "tsc -p jsconfig.json"
+    "check": "tsc -p jsconfig.json",
+    "shops:install": "npm --prefix apps/shop-react install && npm --prefix apps/shop-angular install",
+    "shops:build": "npm --prefix apps/shop-react run build && npm --prefix apps/shop-angular run build && npm --prefix apps/shop-angular run build:zone",
+    "shops:check": "npm --prefix apps/shop-react run check && npm --prefix apps/shop-angular run check",
+    "data:10k": "node --max-old-space-size=4096 tools/build-columnar.mjs additional-scripts/pgcopy/export/compact.zip data/produtos-10k.bin --limit 10000",
+    "data:100k": "node --max-old-space-size=4096 tools/build-columnar.mjs additional-scripts/pgcopy/export/compact.zip data/produtos-100k.bin --limit 100000"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

@@ -40,6 +40,28 @@ test("columnar round-trips every type", () => {
   }
 });
 
+test("in filter matches any listed value, case-insensitively", () => {
+  const { rows, ds } = fixture(3000);
+  const got = Array.from(runOp(ds, { filters: [{ column: "name", op: "in", value: ["ssd 10", "MESA 20"] }] }).indices);
+  const want = rows.filter((r) => r.name !== null && ["ssd 10", "mesa 20"].includes(r.name.toLowerCase())).map((r) => r.i);
+  assert.ok(want.length > 0);
+  assert.deepEqual(got, want);
+});
+
+test("token and prefix filters match a naive word implementation", () => {
+  const { rows, ds } = fixture(4000);
+  const words = (/** @type {string} */ s) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  /** @param {string} q @param {(w: string, q: string) => boolean} hit */
+  const naive = (q, hit) =>
+    rows.filter((r) => r.name !== null && words(q).every((qw) => words(/** @type {string} */ (r.name)).some((w) => hit(w, qw)))).map((r) => r.i);
+  for (const q of ["mesa", "MESA 1", "água", "s", "zz"]) {
+    const tok = Array.from(runOp(ds, { filters: [{ column: "name", op: "token", value: q }] }).indices);
+    const pre = Array.from(runOp(ds, { filters: [{ column: "name", op: "prefix", value: q }] }).indices);
+    assert.deepEqual(tok, naive(q, (w, qw) => w === qw), `token ${q}`);
+    assert.deepEqual(pre, naive(q, (w, qw) => w.startsWith(qw)), `prefix ${q}`);
+  }
+});
+
 test("sorted dictionary: code order equals pt-BR collation", () => {
   const { ds } = fixture(2000);
   const d = /** @type {any} */ (ds.byName.get("name")).dict;

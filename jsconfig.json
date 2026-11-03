@@ -13,5 +13,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.js", "demo/**/*.js", "extension/**/*.js"]
+  "include": ["src/**/*.js", "demo/**/*.js", "extension/**/*.js", "apps/shared/**/*.js"]
 }

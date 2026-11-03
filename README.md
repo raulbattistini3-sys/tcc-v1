@@ -29,6 +29,18 @@ npm run serve        # http://localhost:5173/
 Load the extension: `chrome://extensions` → Developer mode → Load unpacked →
 `extension/`. It listens on `localhost` / `127.0.0.1` only.
 
+## E-commerce shops (React and Angular)
+
+`apps/` holds the same shop built twice for the "real page" experiments:
+- React 19 + MUI + Zustand
+- Angular 22 (zoneless) + Material + NgRx SignalStore + RxJS
+
+Both use Sass, TanStack Table 9 and this core. Page conditions come from the URL
+(`?cond=empty|layout|logged|full`), and `window.__shop` exposes measurements to the harness.
+See [docs/shops.md](docs/shops.md) for setup, the equivalence rules between the two stacks, findings
+and next steps. `harness/` is the Playwright-for-Java (Maven) benchmark that drives both shops and
+writes one CSV row per query: [docs/harness.md](docs/harness.md).
+
 ## Layout
 
 ```

@@ -3,6 +3,7 @@
 // are identical and timings are comparable.
 
 import { dictStrings, isDecoded, NULL_I32, NULL_U8 } from "../data/columnar.js";
+import { buildTextIndex, matchCodes } from "./text-index.js";
 
 /** @typedef {import("../types.js").Dataset} Dataset */
 /** @typedef {import("../types.js").Column} Column */
@@ -34,6 +35,7 @@ export function runOp(ds, spec) {
     if (isWarm(need)) continue;
     prepared += need.dict.count;
     if (need.kind === "lower") lowerStrings(need.dict);
+    else if (need.kind === "index") textIndex(need.dict);
     else dictStrings(need.dict);
   }
   const t0 = performance.now();
@@ -66,9 +68,9 @@ export function runOp(ds, spec) {
 }
 
 /**
- * A string cache an op depends on: `lower` for contains/eq filters,
- * `decoded` for the locale comparator.
- * @typedef {{ key: string, kind: "lower" | "decoded", dict: import("../types.js").Dict }} StringNeed
+ * A string cache an op depends on: `lower` for contains/eq/in filters,
+ * `index` (inverted index) for token/prefix filters, `decoded` for the locale comparator.
+ * @typedef {{ key: string, kind: "lower" | "index" | "decoded", dict: import("../types.js").Dict }} StringNeed
  */
 
 /**
@@ -84,7 +86,9 @@ export function stringNeeds(ds, spec) {
   const needs = new Map();
   for (const f of spec.filters ?? []) {
     const col = column(ds, f.column);
-    if (col.dict) needs.set(`${col.name}:lower`, { key: `${col.name}:lower`, kind: "lower", dict: col.dict });
+    if (!col.dict) continue;
+    const kind = f.op === "token" || f.op === "prefix" ? "index" : "lower";
+    needs.set(`${col.name}:${kind}`, { key: `${col.name}:${kind}`, kind, dict: col.dict });
   }
   for (const k of spec.sort ?? []) {
     const col = column(ds, k.column);
@@ -99,7 +103,9 @@ export function stringNeeds(ds, spec) {
  * @param {StringNeed} need
  */
 export function isWarm(need) {
-  return need.kind === "lower" ? lowerCache.has(need.dict.bytes) : isDecoded(need.dict);
+  if (need.kind === "lower") return lowerCache.has(need.dict.bytes);
+  if (need.kind === "index") return indexCache.has(need.dict.bytes);
+  return isDecoded(need.dict);
 }
 
 /**
@@ -169,6 +175,31 @@ function applyFilter(ds, f, input, n) {
 
 /** @type {WeakMap<Uint8Array, string[]>} */
 const lowerCache = new WeakMap();
+/** @type {WeakMap<Uint8Array, import("./text-index.js").TextIndex>} */
+const indexCache = new WeakMap();
+
+/**
+ * Inverted index of a dictionary, built once per thread (like the string caches).
+ * @param {import("../types.js").Dict} dict
+ */
+function textIndex(dict) {
+  let index = indexCache.get(dict.bytes);
+  if (!index) {
+    index = buildTextIndex(lowerStrings(dict));
+    indexCache.set(dict.bytes, index);
+  }
+  return index;
+}
+
+/**
+ * Size and build time of a column's index on this thread, or null when it was never built.
+ * @param {import("../types.js").Dict} dict
+ * @returns {{ bytes: number, buildMs: number, terms: number, postings: number } | null}
+ */
+export function textIndexStats(dict) {
+  const i = indexCache.get(dict.bytes);
+  return i ? { bytes: i.bytes, buildMs: i.buildMs, terms: i.terms.length, postings: i.postings.length } : null;
+}
 
 /**
  * Lowercased dictionary, decoded once per thread like `dictStrings`.
@@ -196,9 +227,20 @@ function rowTest(col, f) {
   const v = col.values;
   if (col.type === "dict") {
     if (!col.dict) throw new Error(`${col.name}: dictionary missing`);
+    if (f.op === "token" || f.op === "prefix") {
+      // Index path: no string work per query, one byte lookup per row.
+      const mask = matchCodes(textIndex(col.dict), col.dict.count, String(f.value).toLowerCase(), f.op);
+      return (r) => {
+        const c = v[r];
+        return c >= 0 && mask[c] === 1;
+      };
+    }
     const strings = lowerStrings(col.dict);
+    const set = f.op === "in" && Array.isArray(f.value) ? new Set(f.value.map((x) => String(x).toLowerCase())) : null;
     const q = String(f.value).toLowerCase();
     const eq = f.op === "eq";
+    /** @type {(s: string) => boolean} */
+    const hit = set ? (s) => set.has(s) : eq ? (s) => s === q : (s) => s.includes(q);
     // Memo per code (0 unknown, 1 match, 2 no match): each distinct string is
     // tested once, and only if some row in range uses it. Cost follows
     // min(rows, distinct values), not the dictionary size.
@@ -209,7 +251,7 @@ function rowTest(col, f) {
       let m = memo[c];
       if (m === 0) {
         const s = strings[c];
-        memo[c] = m = (eq ? s === q : s.includes(q)) ? 1 : 2;
+        memo[c] = m = hit(s) ? 1 : 2;
       }
       return m === 1;
     };
@@ -223,7 +265,7 @@ function rowTest(col, f) {
   const isNull = col.type === "i32" ? (/** @type {number} */ x) => x === NULL_I32 : Number.isNaN;
   const [lo, hi] =
     f.op === "between" && Array.isArray(f.value)
-      ? f.value
+      ? f.value.map(Number)
       : f.op === "gte"
         ? [Number(f.value), Infinity]
         : f.op === "lte"

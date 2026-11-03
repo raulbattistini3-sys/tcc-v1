@@ -13,7 +13,7 @@ import { defaultCollectors } from "./telemetry/collectors.js";
 import { extensionBridgeExporter, memoryExporter, signalsExporter } from "./telemetry/exporters.js";
 
 export { openColumnar, cellText, dictString } from "./data/columnar.js";
-export { runOp } from "./compute/compute.js";
+export { runOp, textIndexStats } from "./compute/compute.js";
 export { CostModel } from "./model/cost-model.js";
 export { createScheduler } from "./scheduler/scheduler.js";
 export { createTelemetry } from "./telemetry/bus.js";
@@ -32,7 +32,8 @@ export { WorkerClient, WorkerUnavailable } from "./worker/client.js";
  * @property {InitMode} [initMode] defaults to `shared` when cross-origin isolated, else `clone`
  * @property {boolean} [bridge] post telemetry for the WebExtension (default true)
  * @property {Exporter[]} [exporters] extra exporters, e.g. beaconExporter
- * @property {URL | string} [workerUrl]
+ * @property {URL | string | (() => Worker)} [workerUrl] a URL, or a factory returning
+ *   `new Worker(new URL("…/worker.js", import.meta.url), { type: "module" })` when bundled
  */
 
 /** @param {StartOptions} options */

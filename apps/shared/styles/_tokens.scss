@@ -1,0 +1,53 @@
+// Design tokens shared by both shops. React passes them to MUI's theme and to
+// its Sass modules; Angular passes them to Angular Material's M3 theme.
+// Same spacing, radii and breakpoints, so both pages lay out the same boxes.
+
+$brand: #3b5bdb;
+$accent: #f08c00;
+$surface: #f8f9fb;
+// No webfont is loaded (style-src/font-src 'self'), so both shops use the same fallback stack.
+$font: Roboto, "Segoe UI", system-ui, sans-serif;
+
+$space: 8px;
+$radius: 12px;
+$header-height: 64px;
+$sidebar-width: 280px;
+$card-min: 200px;
+
+$bp-md: 900px;
+
+@mixin below($bp) {
+  @media (max-width: ($bp - 1px)) {
+    @content;
+  }
+}
+
+// The shell: header on top, sidebar + content below. Same grid in both apps.
+@mixin shell {
+  display: grid;
+  grid-template-columns: $sidebar-width minmax(0, 1fr);
+  grid-template-rows: $header-height minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+  min-height: 100vh;
+
+  @include below($bp-md) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "main" "footer";
+  }
+}
+
+// The product grid: both apps render the same 48 cards per page in this grid.
+@mixin product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax($card-min, 1fr));
+  gap: $space * 2;
+}
+
+@mixin carousel-track {
+  display: flex;
+  gap: $space * 2;
+  will-change: transform;
+}
