@@ -9,14 +9,33 @@
 /** @typedef {import("./conditions.js").Conditions} Conditions */
 
 /**
+ * One row per query that reached the screen. Everything the harness needs
+ * about a query is here, joined by queryId, so it never has to match log events.
+ * Times are page-clock ms (performance.now()).
  * @typedef {object} PaintedQuery
  * @property {number} queryId
  * @property {"main" | "worker"} target
  * @property {string} reason
- * @property {number} total
- * @property {number} computeToResultMs
- * @property {number} mainBlockedMs
- * @property {number | null} toPaintMs query start → frame after render
+ * @property {boolean} explored
+ * @property {number} total rows in the result
+ * @property {number} computeToResultMs scheduler run: time to result
+ * @property {number} mainBlockedMs scheduler run: main-thread time it took
+ * @property {number} prepareMs one-off string decoding / index build inside the run
+ * @property {number} prepared strings decoded in that step
+ * @property {number} filterMs
+ * @property {number} sortMs
+ * @property {string} sortClass
+ * @property {number} predMainMs
+ * @property {number} predWorkerMs
+ * @property {number} budgetMs
+ * @property {number} mainBusy
+ * @property {string} pressure
+ * @property {number | null} postMs worker runs: main thread inside postMessage
+ * @property {number | null} queueMs worker runs
+ * @property {number | null} replyMs worker runs: compute end → page received
+ * @property {number | null} startAt query start (mark)
+ * @property {number} paintedAt first frame after render
+ * @property {number | null} toPaintMs paintedAt - startAt
  */
 
 /**
@@ -27,6 +46,8 @@
  * @property {PaintedQuery[]} queries
  * @property {string | null} workerError
  * @property {object[]} log every telemetry event (decisions, results with timing breakdown, LoAF, INP)
+ * @property {() => void} reset back to the initial query (empty search, no facets, no sort, page 0).
+ *   Not a user interaction: the harness calls it between passes and does not measure it.
  */
 
 /** @returns {ShopProbe | undefined} */
@@ -35,7 +56,7 @@ const probe = () => /** @type {any} */ (globalThis).__shop;
 /** @param {"react" | "angular"} framework @param {Conditions} conditions @returns {ShopProbe} */
 export function installProbe(framework, conditions) {
   /** @type {ShopProbe} */
-  const p = { framework, conditions, ready: false, queries: [], workerError: null, log: [] };
+  const p = { framework, conditions, ready: false, queries: [], workerError: null, log: [], reset: () => {} };
   /** @type {any} */ (globalThis).__shop = p;
   return p;
 }
@@ -50,13 +71,31 @@ export function markPainted(r) {
     setTimeout(() => {
       const end = performance.mark(`shop:query:${r.queryId}:painted`);
       const start = performance.getEntriesByName(`shop:query:${r.queryId}:start`)[0];
+      const d = r.decision;
+      const w = r.workerTiming;
       probe()?.queries.push({
         queryId: r.queryId,
         target: r.target,
-        reason: r.decision.reason,
+        reason: d.reason,
+        explored: d.explored,
         total: r.total,
         computeToResultMs: r.totalMs,
         mainBlockedMs: r.mainBlockedMs,
+        prepareMs: r.stats.prepareMs,
+        prepared: r.stats.prepared,
+        filterMs: r.stats.filterMs,
+        sortMs: r.stats.sortMs,
+        sortClass: r.stats.sortClass,
+        predMainMs: d.predMainMs,
+        predWorkerMs: d.predWorkerMs,
+        budgetMs: d.budgetMs,
+        mainBusy: d.mainBusy,
+        pressure: d.pressure,
+        postMs: w?.postMs ?? null,
+        queueMs: w?.queueMs ?? null,
+        replyMs: w?.replyMs ?? null,
+        startAt: start ? start.startTime : null,
+        paintedAt: end.startTime,
         toPaintMs: start ? end.startTime - start.startTime : null,
       });
     }, 0),
@@ -72,4 +111,10 @@ export function markReady(catalog) {
     p.workerError = catalog.app.workerError;
     p.log = catalog.app.log;
   }
+}
+
+/** Each app registers how to return to the initial query. @param {() => void} fn */
+export function registerReset(fn) {
+  const p = probe();
+  if (p) p.reset = fn;
 }

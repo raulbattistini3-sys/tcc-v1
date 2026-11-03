@@ -7,7 +7,8 @@
 //   ?cond=logged       layout + signed-in user: cart badge, recommendations, user menu (default)
 //   ?cond=full         logged + third-party scripts + running carousel
 //   &tp=1 &carousel=1  add either one to any preset
-//   &strategy=adaptive|main|worker|fixed   &cmp=auto|locale   &data=/data/produtos.bin   &seed=7
+//   &strategy=adaptive|main|worker|fixed   &cmp=auto|locale   &match=contains|token|prefix
+//   &data=/data/produtos.bin   &seed=7
 //
 // `hydration` only exists for Next; these SPAs have no hydration step.
 
@@ -22,6 +23,7 @@
  * @property {boolean} carousel
  * @property {Strategy} strategy
  * @property {"auto" | "locale"} comparator
+ * @property {import("./catalog.js").SearchMode} searchMode initial search mode
  * @property {string} dataUrl
  * @property {number} seed
  */
@@ -47,6 +49,7 @@ export function readConditions(search = globalThis.location?.search ?? "") {
     carousel: level >= 3 || flag("carousel"),
     strategy: /** @type {Strategy} */ (STRATEGIES.includes(strategy) ? strategy : "adaptive"),
     comparator: p.get("cmp") === "locale" ? "locale" : "auto",
+    searchMode: /** @type {import("./catalog.js").SearchMode} */ (["contains", "token", "prefix"].includes(p.get("match") ?? "") ? p.get("match") : "contains"),
     dataUrl: /^\/[\w./-]+\.bin$/.test(data) && !data.includes("..") ? data : "/data/produtos.bin",
     seed: Number(p.get("seed") ?? 7) || 7,
   };

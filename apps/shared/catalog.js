@@ -16,8 +16,17 @@ import { dictString } from "../../src/data/columnar.js";
 /**
  * What the sidebar, search bar and table headers produce. `sorting` is
  * TanStack's SortingState (`{ id, desc }[]`), so it maps 1:1.
+ * How the search box matches product names (see src/compute/text-index.js):
+ * - `contains` substring scan over every distinct name; no build cost, slowest per query
+ * - `token`    whole words, via an inverted index built once per thread
+ * - `prefix`   word starts ("mou fi" → "Mouse Sem Fio"), same index
+ * @typedef {"contains" | "token" | "prefix"} SearchMode
+ */
+
+/**
  * @typedef {object} CatalogQuery
  * @property {string} search
+ * @property {SearchMode} searchMode
  * @property {string[]} categories
  * @property {[number | null, number | null]} price
  * @property {boolean} inStock
@@ -49,10 +58,19 @@ import { dictString } from "../../src/data/columnar.js";
  * @property {Decision} decision
  * @property {number} totalMs
  * @property {number} mainBlockedMs
+ * @property {import("../../src/worker/protocol.js").OpStats} stats prepare/filter/sort split, sort class
+ * @property {import("../../src/worker/client.js").WorkerTiming | null} workerTiming worker runs only
  */
 
 /** @type {CatalogQuery} */
-export const EMPTY_QUERY = { search: "", categories: [], price: [null, null], inStock: false, sorting: [] };
+export const EMPTY_QUERY = { search: "", searchMode: "contains", categories: [], price: [null, null], inStock: false, sorting: [] };
+
+/** @type {{ value: SearchMode, label: string }[]} */
+export const SEARCH_MODES = [
+  { value: "contains", label: "Contém" },
+  { value: "token", label: "Palavra inteira" },
+  { value: "prefix", label: "Início de palavra" },
+];
 
 /** Both apps use the same debounce: a timer in the Zustand action, `debounceTime` in RxJS. */
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -78,7 +96,7 @@ export function toSpec(q, opts = {}) {
   else if (hi !== null) filters.push({ column: "valor_de_venda", op: "lte", value: hi });
   if (q.inStock) filters.push({ column: "quantidade_em_estoque", op: "gte", value: 1 });
   const search = q.search.trim();
-  if (search) filters.push({ column: "name", op: "contains", value: search });
+  if (search) filters.push({ column: "name", op: q.searchMode, value: search });
   const sort = q.sorting.map((s) => ({
     column: COLUMN[s.id] ?? s.id,
     desc: s.desc,
@@ -163,7 +181,17 @@ export async function createCatalog(options) {
       const r = await app.scheduler.run(toSpec(q, options), { channel: "catalog" });
       if (r.stale || queryId !== latest) return null;
       performance.mark(`shop:query:${queryId}:result`);
-      return { queryId, indices: r.indices, total: r.indices.length, target: r.target, decision: r.decision, totalMs: r.timing.totalMs, mainBlockedMs: r.timing.mainBlockedMs };
+      return {
+        queryId,
+        indices: r.indices,
+        total: r.indices.length,
+        target: r.target,
+        decision: r.decision,
+        totalMs: r.timing.totalMs,
+        mainBlockedMs: r.timing.mainBlockedMs,
+        stats: r.stats,
+        workerTiming: r.timing.worker ?? null,
+      };
     },
   };
 }
