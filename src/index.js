@@ -13,7 +13,7 @@ import { defaultCollectors } from "./telemetry/collectors.js";
 import { extensionBridgeExporter, memoryExporter, signalsExporter } from "./telemetry/exporters.js";
 
 export { openColumnar, cellText, dictString } from "./data/columnar.js";
-export { runOp } from "./compute/compute.js";
+export { runOp, textIndexStats } from "./compute/compute.js";
 export { CostModel } from "./model/cost-model.js";
 export { createScheduler } from "./scheduler/scheduler.js";
 export { createTelemetry } from "./telemetry/bus.js";

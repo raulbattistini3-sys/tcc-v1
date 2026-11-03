@@ -64,7 +64,9 @@
 /**
  * @typedef {object} Filter
  * @property {string} column
- * @property {"contains" | "eq" | "in" | "gte" | "lte" | "between"} op `in` takes a list of strings (facets)
+ * @property {"contains" | "eq" | "in" | "token" | "prefix" | "gte" | "lte" | "between"} op
+ *   `in` takes a list of strings (facets). `contains` scans every distinct string;
+ *   `token` (whole words) and `prefix` (word starts) use a per-thread inverted index.
  * @property {string | number | boolean | [number, number] | string[]} value
  */
 
