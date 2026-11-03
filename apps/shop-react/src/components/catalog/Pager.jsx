@@ -1,7 +1,7 @@
 import Pagination from "@mui/material/Pagination";
 import styles from "./Catalog.module.scss";
 
-/** @param {{ table: import("./ProductCatalog.jsx").ProductTable }} props */
+/** @param {{ table: import("../../hooks/useProductTable.js").ProductTable }} props */
 export function Pager({ table }) {
   const pages = table.getPageCount();
   if (pages <= 1) return null;

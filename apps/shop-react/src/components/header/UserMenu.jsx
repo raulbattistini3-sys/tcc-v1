@@ -4,13 +4,11 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import { useSessionStore } from "../../stores/session.store.js";
+import { useSessionActions, useUser } from "../../hooks/useSession.js";
 
 export function UserMenu() {
-  const user = useSessionStore((s) => s.user);
-  const signIn = useSessionStore((s) => s.signIn);
-  const signOut = useSessionStore((s) => s.signOut);
-  /** @type {[HTMLElement | null, (el: HTMLElement | null) => void]} */
+  const user = useUser();
+  const { signIn, signOut } = useSessionActions();
   const [anchor, setAnchor] = useState(/** @type {HTMLElement | null} */ (null));
 
   if (!user) {
@@ -20,17 +18,18 @@ export function UserMenu() {
       </Button>
     );
   }
+  const close = () => setAnchor(null);
   return (
     <>
       <IconButton onClick={(e) => setAnchor(e.currentTarget)} aria-label={`Conta de ${user.name}`}>
         <Avatar sx={{ width: 32, height: 32, bgcolor: "secondary.main" }}>{user.initials}</Avatar>
       </IconButton>
-      <Menu anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)}>
+      <Menu anchorEl={anchor} open={anchor !== null} onClose={close}>
         <MenuItem disabled>{user.name}</MenuItem>
-        <MenuItem onClick={() => setAnchor(null)}>Meus pedidos</MenuItem>
+        <MenuItem onClick={close}>Meus pedidos</MenuItem>
         <MenuItem
           onClick={() => {
-            setAnchor(null);
+            close();
             signOut();
           }}
         >

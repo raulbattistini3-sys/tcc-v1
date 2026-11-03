@@ -5,11 +5,11 @@ import Box from "@mui/material/Box";
 import { SearchBar } from "./SearchBar.jsx";
 import { UserMenu } from "./UserMenu.jsx";
 import { CartButton } from "./CartButton.jsx";
-import { useSessionStore } from "../../stores/session.store.js";
+import { useSignedIn } from "../../hooks/useSession.js";
 
 // The header composes three independent pieces; each one subscribes to its own store slice.
 export function Header() {
-  const signedIn = useSessionStore((s) => s.user !== null);
+  const signedIn = useSignedIn();
   return (
     <AppBar position="static" elevation={0}>
       <Toolbar sx={{ gap: 2 }}>

@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { formatPrice } from "@shared/catalog.js";
-import { selectLines, selectSubtotal, useCartStore } from "../../stores/cart.store.js";
+import { useCartActions, useCartLines, useCartSubtotal } from "../../hooks/useCart.js";
 import { useUiStore } from "../../stores/ui.store.js";
 
 export function CartDrawer() {
@@ -33,11 +33,9 @@ export function CartDrawer() {
 }
 
 function CartLines() {
-  const lines = useCartStore(selectLines);
-  const subtotal = useCartStore(selectSubtotal);
-  const setQty = useCartStore((s) => s.setQty);
-  const remove = useCartStore((s) => s.remove);
-  const clear = useCartStore((s) => s.clear);
+  const lines = useCartLines();
+  const subtotal = useCartSubtotal();
+  const { setQty, remove, clear } = useCartActions();
 
   if (lines.length === 0) return <Typography color="text.secondary">Seu carrinho está vazio.</Typography>;
   return (

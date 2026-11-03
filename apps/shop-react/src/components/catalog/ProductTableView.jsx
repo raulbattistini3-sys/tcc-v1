@@ -6,7 +6,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 
-/** @param {{ table: import("./ProductCatalog.jsx").ProductTable }} props */
+/** @param {{ table: import("../../hooks/useProductTable.js").ProductTable }} props */
 export function ProductTableView({ table }) {
   return (
     <TableContainer>
@@ -20,7 +20,7 @@ export function ProductTableView({ table }) {
                 return (
                   <TableCell key={header.id} align={align} sortDirection={sorted || false}>
                     {header.column.getCanSort() ? (
-                      <TableSortLabel active={!!sorted} direction={sorted || "asc"} onClick={header.column.getToggleSortingHandler()}>
+                      <TableSortLabel data-testid={`sort-${header.column.id}`} active={!!sorted} direction={sorted || "asc"} onClick={header.column.getToggleSortingHandler()}>
                         <table.FlexRender header={header} />
                       </TableSortLabel>
                     ) : (

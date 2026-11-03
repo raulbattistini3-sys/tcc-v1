@@ -14,7 +14,7 @@ import styles from "./Catalog.module.scss";
 
 const nf = new Intl.NumberFormat("pt-BR");
 
-/** @param {{ table: import("./ProductCatalog.jsx").ProductTable, showViewToggle: boolean }} props */
+/** @param {{ table: import("../../hooks/useProductTable.js").ProductTable, showViewToggle: boolean }} props */
 export function CatalogToolbar({ table, showViewToggle }) {
   const total = useCatalogStore((s) => s.result?.total ?? 0);
   const view = useUiStore((s) => s.view);
@@ -43,10 +43,10 @@ export function CatalogToolbar({ table, showViewToggle }) {
       </FormControl>
       {showViewToggle && (
         <ToggleButtonGroup size="small" exclusive value={view} onChange={(_, v) => v && setView(v)} aria-label="Visualização">
-          <ToggleButton value="grid" aria-label="Grade">
+          <ToggleButton value="grid" aria-label="Grade" data-testid="view-grid">
             <GridViewIcon fontSize="small" />
           </ToggleButton>
-          <ToggleButton value="table" aria-label="Tabela">
+          <ToggleButton value="table" aria-label="Tabela" data-testid="view-table">
             <TableRowsIcon fontSize="small" />
           </ToggleButton>
         </ToggleButtonGroup>

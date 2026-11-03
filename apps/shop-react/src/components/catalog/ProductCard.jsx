@@ -8,16 +8,16 @@ import Typography from "@mui/material/Typography";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import { formatPrice } from "@shared/catalog.js";
 import { productImage } from "@shared/product-image.js";
-import { useCartStore } from "../../stores/cart.store.js";
-import { useSessionStore } from "../../stores/session.store.js";
+import { useCartActions } from "../../hooks/useCart.js";
+import { useSignedIn } from "../../hooks/useSession.js";
 
 /** @typedef {import("@shared/catalog.js").Product} Product */
 
 // memo: a product is a fresh object per page, so this only skips re-renders
 // caused by parents (e.g. a cart change), the same as Angular's OnPush + track.
 export const ProductCard = memo(function ProductCard(/** @type {{ product: Product }} */ { product }) {
-  const add = useCartStore((s) => s.add);
-  const signedIn = useSessionStore((s) => s.user !== null);
+  const { add } = useCartActions();
+  const signedIn = useSignedIn();
   return (
     <Card variant="outlined" sx={{ display: "flex", flexDirection: "column" }}>
       <CardMedia component="img" height="120" image={productImage(product.categoria, product.index)} alt="" loading="lazy" />

@@ -4,6 +4,7 @@ import Stack from "@mui/material/Stack";
 import { CategoryFacet } from "./CategoryFacet.jsx";
 import { PriceFilter } from "./PriceFilter.jsx";
 import { StockToggle } from "./StockToggle.jsx";
+import { SearchModeFilter } from "./SearchModeFilter.jsx";
 import { useCatalogStore } from "../../stores/catalog.store.js";
 
 export function FilterSidebar() {
@@ -13,6 +14,7 @@ export function FilterSidebar() {
       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
         Filtros
       </Typography>
+      <SearchModeFilter />
       <CategoryFacet />
       <PriceFilter />
       <StockToggle />
