@@ -78,7 +78,8 @@ export class WorkerClient {
    * when CSP or anything else stops the worker, so callers can fall back to
    * the main thread.
    *
-   * @param {URL | string} url
+   * @param {URL | string | (() => Worker)} url a script URL, or a factory so a bundler
+   *   (Vite, Angular) can see the literal `new Worker(new URL(...))` and bundle the worker
    * @param {{ dataset: Dataset, mode?: InitMode, dataUrl?: string, timeoutMs?: number }} options
    * @returns {Promise<WorkerClient>}
    */
@@ -96,7 +97,7 @@ export class WorkerClient {
     /** @type {Worker} */
     let worker;
     try {
-      worker = new Worker(url, { type: "module", name: "tcc-compute" });
+      worker = typeof url === "function" ? url() : new Worker(url, { type: "module", name: "tcc-compute" });
     } catch (err) {
       document.removeEventListener("securitypolicyviolation", onViolation);
       // Chromium throws synchronously when CSP blocks the worker script.

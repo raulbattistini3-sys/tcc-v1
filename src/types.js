@@ -64,8 +64,8 @@
 /**
  * @typedef {object} Filter
  * @property {string} column
- * @property {"contains" | "eq" | "gte" | "lte" | "between"} op
- * @property {string | number | boolean | [number, number]} value
+ * @property {"contains" | "eq" | "in" | "gte" | "lte" | "between"} op `in` takes a list of strings (facets)
+ * @property {string | number | boolean | [number, number] | string[]} value
  */
 
 /**

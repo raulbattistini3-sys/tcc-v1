@@ -40,6 +40,14 @@ test("columnar round-trips every type", () => {
   }
 });
 
+test("in filter matches any listed value, case-insensitively", () => {
+  const { rows, ds } = fixture(3000);
+  const got = Array.from(runOp(ds, { filters: [{ column: "name", op: "in", value: ["ssd 10", "MESA 20"] }] }).indices);
+  const want = rows.filter((r) => r.name !== null && ["ssd 10", "mesa 20"].includes(r.name.toLowerCase())).map((r) => r.i);
+  assert.ok(want.length > 0);
+  assert.deepEqual(got, want);
+});
+
 test("sorted dictionary: code order equals pt-BR collation", () => {
   const { ds } = fixture(2000);
   const d = /** @type {any} */ (ds.byName.get("name")).dict;

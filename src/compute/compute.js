@@ -197,8 +197,11 @@ function rowTest(col, f) {
   if (col.type === "dict") {
     if (!col.dict) throw new Error(`${col.name}: dictionary missing`);
     const strings = lowerStrings(col.dict);
+    const set = f.op === "in" && Array.isArray(f.value) ? new Set(f.value.map((x) => String(x).toLowerCase())) : null;
     const q = String(f.value).toLowerCase();
     const eq = f.op === "eq";
+    /** @type {(s: string) => boolean} */
+    const hit = set ? (s) => set.has(s) : eq ? (s) => s === q : (s) => s.includes(q);
     // Memo per code (0 unknown, 1 match, 2 no match): each distinct string is
     // tested once, and only if some row in range uses it. Cost follows
     // min(rows, distinct values), not the dictionary size.
@@ -209,7 +212,7 @@ function rowTest(col, f) {
       let m = memo[c];
       if (m === 0) {
         const s = strings[c];
-        memo[c] = m = (eq ? s === q : s.includes(q)) ? 1 : 2;
+        memo[c] = m = hit(s) ? 1 : 2;
       }
       return m === 1;
     };
@@ -223,7 +226,7 @@ function rowTest(col, f) {
   const isNull = col.type === "i32" ? (/** @type {number} */ x) => x === NULL_I32 : Number.isNaN;
   const [lo, hi] =
     f.op === "between" && Array.isArray(f.value)
-      ? f.value
+      ? f.value.map(Number)
       : f.op === "gte"
         ? [Number(f.value), Infinity]
         : f.op === "lte"

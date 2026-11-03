@@ -32,7 +32,8 @@ export { WorkerClient, WorkerUnavailable } from "./worker/client.js";
  * @property {InitMode} [initMode] defaults to `shared` when cross-origin isolated, else `clone`
  * @property {boolean} [bridge] post telemetry for the WebExtension (default true)
  * @property {Exporter[]} [exporters] extra exporters, e.g. beaconExporter
- * @property {URL | string} [workerUrl]
+ * @property {URL | string | (() => Worker)} [workerUrl] a URL, or a factory returning
+ *   `new Worker(new URL("…/worker.js", import.meta.url), { type: "module" })` when bundled
  */
 
 /** @param {StartOptions} options */
