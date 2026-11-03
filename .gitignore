@@ -5,3 +5,9 @@ additional-scripts/pgcopy/export/*.csv
 additional-scripts/pgcopy/export/*.json
 additional-scripts/pgcopy/export/*.zip
 *.log
+
+# shop builds
+apps/*/dist/
+apps/*/dist-zone/
+apps/*/.angular/
+apps/*/out-tsc/

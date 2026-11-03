@@ -12,7 +12,10 @@
     "serve:no-worker": "node tools/serve.mjs --csp no-worker",
     "serve:coi": "node tools/serve.mjs --coi --csp strict",
     "test": "node --test \"test/*.test.js\"",
-    "check": "tsc -p jsconfig.json"
+    "check": "tsc -p jsconfig.json",
+    "shops:install": "npm --prefix apps/shop-react install && npm --prefix apps/shop-angular install",
+    "shops:build": "npm --prefix apps/shop-react run build && npm --prefix apps/shop-angular run build && npm --prefix apps/shop-angular run build:zone",
+    "shops:check": "npm --prefix apps/shop-react run check && npm --prefix apps/shop-angular run check"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
