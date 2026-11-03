@@ -3,15 +3,17 @@ import { MatButtonModule } from "@angular/material/button";
 import { CategoryFacetComponent } from "./category-facet.component";
 import { PriceFilterComponent } from "./price-filter.component";
 import { StockToggleComponent } from "./stock-toggle.component";
+import { SearchModeFilterComponent } from "./search-mode-filter.component";
 import { CatalogStore } from "../stores/catalog.store";
 
 @Component({
   selector: "shop-filter-sidebar",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, CategoryFacetComponent, PriceFilterComponent, StockToggleComponent],
+  imports: [MatButtonModule, SearchModeFilterComponent, CategoryFacetComponent, PriceFilterComponent, StockToggleComponent],
   template: `
     <nav aria-label="Filtros">
       <h2>Filtros</h2>
+      <shop-search-mode-filter />
       <shop-category-facet />
       <shop-price-filter />
       <shop-stock-toggle />

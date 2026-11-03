@@ -26,8 +26,8 @@ import type { ProductTable } from "./product-catalog.component";
     </mat-form-field>
     @if (showViewToggle()) {
       <mat-button-toggle-group [value]="ui.view()" (change)="ui.setView($event.value)" aria-label="Visualização" hideSingleSelectionIndicator>
-        <mat-button-toggle value="grid" aria-label="Grade"><shop-icon name="grid_view" [size]="20" /></mat-button-toggle>
-        <mat-button-toggle value="table" aria-label="Tabela"><shop-icon name="table_rows" [size]="20" /></mat-button-toggle>
+        <mat-button-toggle value="grid" aria-label="Grade" data-testid="view-grid"><shop-icon name="grid_view" [size]="20" /></mat-button-toggle>
+        <mat-button-toggle value="table" aria-label="Tabela" data-testid="view-table"><shop-icon name="table_rows" [size]="20" /></mat-button-toggle>
       </mat-button-toggle-group>
     }
   `,

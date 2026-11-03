@@ -10,8 +10,8 @@ import { CATALOG } from "../tokens";
   template: `
     <fieldset>
       <legend>Categoria</legend>
-      @for (c of categories; track c) {
-        <mat-checkbox [checked]="store.query().categories.includes(c)" (change)="store.toggleCategory(c)">{{ c }}</mat-checkbox>
+      @for (c of categories; track c; let i = $index) {
+        <mat-checkbox [attr.data-testid]="'category-' + i" [checked]="store.query().categories.includes(c)" (change)="store.toggleCategory(c)">{{ c }}</mat-checkbox>
       }
     </fieldset>
   `,

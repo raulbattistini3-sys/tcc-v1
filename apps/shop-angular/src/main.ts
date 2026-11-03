@@ -6,7 +6,7 @@ import { registerLocaleData } from "@angular/common";
 import localePt from "@angular/common/locales/pt";
 import { createCatalog } from "@shared/catalog.js";
 import { readConditions } from "@shared/conditions.js";
-import { installProbe, markReady } from "@shared/harness.js";
+import { installProbe, markReady, registerReset } from "@shared/harness.js";
 import { startThirdParty } from "@shared/third-party.js";
 import { AppComponent } from "./app/app.component";
 import { changeDetection } from "./app/change-detection";
@@ -43,7 +43,9 @@ async function boot() {
         // Cross-domain wiring lives here, not inside stores: whoever signs in owns the active cart.
         effect(() => cart.switchOwner(session.user()?.id ?? "guest"));
         if (conditions.loggedIn) session.signIn();
+        store.setInitialSearchMode(conditions.searchMode);
         if (!conditions.chrome) store.setPageSize(100);
+        registerReset(() => store.reset());
       }),
     ],
   });

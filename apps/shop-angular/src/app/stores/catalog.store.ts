@@ -1,13 +1,15 @@
 // Catalog domain: query, page and the latest scheduler result.
 // Counterpart of catalog.store.js (Zustand). The only RxJS piece is the
-// search debounce, with the same 250 ms and the same semantics as the Zustand
-// timer (no distinctUntilChanged, because the React side doesn't dedupe either).
+// search debounce, with the same 250 ms and the same semantics as the React
+// useDebouncedCallback: commit only when the text differs from the committed one.
+// Like the Zustand actions, every method runs the query synchronously in the
+// handler that called it.
 import { inject } from "@angular/core";
 import { patchState, signalStore, withMethods, withState } from "@ngrx/signals";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { debounceTime, pipe, tap } from "rxjs";
 import { EMPTY_QUERY, PAGE_SIZE, SEARCH_DEBOUNCE_MS } from "@shared/catalog.js";
-import type { CatalogQuery, CatalogResult } from "@shared/catalog.js";
+import type { CatalogQuery, CatalogResult, SearchMode } from "@shared/catalog.js";
 import { CATALOG } from "../tokens";
 
 export type Sorting = CatalogQuery["sorting"];
@@ -52,7 +54,9 @@ export const CatalogStore = signalStore(
     const commitSearch = rxMethod<string>(
       pipe(
         debounceTime(SEARCH_DEBOUNCE_MS),
-        tap((search) => commit({ search })),
+        tap((search) => {
+          if (search !== store.query().search) commit({ search });
+        }),
       ),
     );
     return {
@@ -65,6 +69,8 @@ export const CatalogStore = signalStore(
         const cats = store.query().categories;
         commit({ categories: cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c] });
       },
+      setSearchMode: (searchMode: SearchMode) => commit({ searchMode }),
+      setInitialSearchMode: (searchMode: SearchMode) => patchState(store, (s) => ({ query: { ...s.query, searchMode } })),
       setPrice: (price: [number | null, number | null]) => commit({ price }),
       setInStock: (inStock: boolean) => commit({ inStock }),
       setSorting: (sorting: Sorting) => commit({ sorting }),
@@ -72,7 +78,12 @@ export const CatalogStore = signalStore(
       setPageSize: (pageSize: number) => patchState(store, { pageSize }),
       clearFilters() {
         patchState(store, { searchInput: "" });
-        commit({ ...EMPTY_QUERY, sorting: store.query().sorting });
+        commit({ ...EMPTY_QUERY, searchMode: store.query().searchMode, sorting: store.query().sorting });
+      },
+      /** Back to the initial query (harness, between passes). */
+      reset() {
+        patchState(store, { searchInput: "" });
+        commit({ ...EMPTY_QUERY, searchMode: store.query().searchMode });
       },
     };
   }),

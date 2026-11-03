@@ -18,7 +18,7 @@ import type { ProductTable } from "./product-catalog.component";
               @let sorted = header.column.getIsSorted();
               <th [class.right]="align(header.column.columnDef.meta) === 'right'" [attr.aria-sort]="sorted ? (sorted === 'asc' ? 'ascending' : 'descending') : null">
                 @if (header.column.getCanSort()) {
-                  <button class="sort" (click)="header.column.toggleSorting()">
+                  <button class="sort" [attr.data-testid]="'sort-' + header.column.id" (click)="header.column.toggleSorting()">
                     <ng-container *flexRenderHeader="header; let value">{{ value }}</ng-container>
                     <shop-icon [name]="sorted === 'desc' ? 'arrow_downward' : 'arrow_upward'" [size]="16" [class.inactive]="!sorted" />
                   </button>
