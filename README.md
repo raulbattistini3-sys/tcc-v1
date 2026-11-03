@@ -38,7 +38,8 @@ Load the extension: `chrome://extensions` → Developer mode → Load unpacked �
 Both use Sass, TanStack Table 9 and this core. Page conditions come from the URL
 (`?cond=empty|layout|logged|full`), and `window.__shop` exposes measurements to the harness.
 See [docs/shops.md](docs/shops.md) for setup, the equivalence rules between the two stacks, findings
-and next steps.
+and next steps. `harness/` is the Playwright-for-Java (Maven) benchmark that drives both shops and
+writes one CSV row per query: [docs/harness.md](docs/harness.md).
 
 ## Layout
 

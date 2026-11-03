@@ -26,17 +26,24 @@ Both shops import the same core (`src/`), and their worker entry is a one-line i
 
 | Concern | React | Angular |
 |---|---|---|
-| One store per domain | `session`, `cart`, `catalog`, `ui` Zustand stores | `SessionStore`, `CartStore`, `CatalogStore`, `UiStore` SignalStores |
-| Granular reads | selectors (`selectCount`, `s => s.result`) | `computed` / per-field signals |
-| Search debounce | 250 ms timer in the store action | `rxMethod` + `debounceTime(250)` (no `distinctUntilChanged` on either side) |
+| One store per domain | `session`, `cart`, `ui` hook stores; `catalog` is a vanilla `createStore` with the engine injected, provided by `<CatalogProvider>` (store-in-context) | `SessionStore`, `CartStore`, `CatalogStore`, `UiStore` SignalStores |
+| Granular reads | custom hooks over selectors (`useCartCount`, `useSignedIn`, `useCatalogStore(s => s.result)`, `useShallow` for action bundles) | `computed` / per-field signals |
+| Where the query runs | inside the store action, synchronously in the handler that called it | inside the store method, same |
+| Search debounce | `useDebouncedCallback` (timer → action, no render or effect in between) | `rxMethod` + `debounceTime(250)` |
+| Unchanged search text | not committed | not committed |
 | Cart persistence | `persist` → sessionStorage, whole state per change | `withHooks` effect → sessionStorage, whole state per change |
 | Cross-store wiring | `useSessionStore.subscribe` in `main.jsx` | `effect` in `provideAppInitializer` |
 | Table | `useTable`, fully manual (sorting, pagination) | `injectTable`, same options |
 | Rows built per page | `useMemo(catalog.page(...))` | `computed(catalog.page(...))` |
 | Card re-render guard | `React.memo` | `OnPush` + `track row.id` |
 | Carousel | rAF loop writing `style.transform` via ref | same loop via `ElementRef`, outside the zone |
-| "Painted" mark | `useEffect` on result → `markPainted` | `effect` → `afterNextRender` → `markPainted` |
+| "Painted" mark | `useEffect` on result → `markPainted` (observes only) | `effect` → `afterNextRender` → `markPainted` |
 | Bootstrap order | conditions → probe → catalog → stores → render → first query | same |
+
+**No effect in the measured path.** In idiomatic React, a query would often run from a
+`useEffect` on the query state. That starts the compute after a render, not inside the
+interaction, and Angular would start it at a different point. Here, the effects that remain
+(timer cleanup, the harness's painted mark) only observe.
 
 The design doc suggested Context for the session. Here the session is a Zustand store, like every
 other domain, so a sign-in only re-renders the components that read `user`. Context is still wrong
@@ -47,6 +54,23 @@ TanStack holds sorting and pagination state and builds 48 row objects per page. 
 would need 600k JS objects on the heap, which would make main and worker equally slow.
 TanStack Table 9 also ships `experimental-worker-plugin` (`createTableWorker`). It would be a fair
 extra baseline: the library's own worker offload compared with the adaptive scheduler.
+
+## Search modes (more than one way to filter)
+
+The search box has three modes (`?match=` or the "Busca por" radio group). They're the classic
+trade between scanning and indexing:
+
+| mode | how | one-off cost (600k names) | per query, warm |
+|---|---|---|---|
+| `contains` | substring over every distinct lowercased name (`src/compute/compute.js`) | ≈ 40 ms decode (node), 1.5–2 s in the page | 60–70 ms |
+| `token` | whole words via an inverted index (`src/compute/text-index.js`) | ≈ 1 s build, **17.6 MB**, 300k terms / 2.28M postings | 10–15 ms |
+| `prefix` | word starts; the same index, binary-searched term range | same index | 10–16 ms |
+
+(node numbers from `node --expose-gc tools/bench-node.mjs`.) The index is laid out as CSR in
+typed arrays (`terms` + `offsets` + `postings`), not a `Map<string, number[]>`. That's one
+allocation the GC never traces into, instead of hundreds of thousands of small arrays. Half the
+terms are the numeric suffixes in the product names, a data property worth one sentence in the
+text. The index is per thread, like the string caches: with `worker` it lives in the worker's heap.
 
 ## Running
 
@@ -75,8 +99,13 @@ serve` (port 5173, serves /data) plus `npm --prefix apps/shop-react run dev` (51
    The worker does not warm anything during init (`workerInitMs` ≈ 0.3 ms, because opening the
    columnar file is lazy). It pays the same cold cost, off the main thread. So the sentence for the
    text is: *the worker hides cold start and GC from the user; it does not remove them, and time to
-   result is the same or slightly worse.* The GC hypothesis still needs its own run (CDP heap /
-   `V8.GC` trace events from the harness).
+   result is the same or slightly worse.* The harness now measures the GC part directly (see
+   docs/harness.md, "first smoke run").
+
+   **Should the "602 vs 5" pair be used at all?** Not as a pair: it divides a result time by a
+   blocking time. The harness reports `computeToResultMs` and `mainBlockedMs` as separate columns,
+   with `prepareMs` (the cold one-off) apart. The defensible comparisons are blocked vs blocked
+   (≈1.6 s vs ≈0.2 ms) and result vs result (≈1.6 s vs ≈1.9 s), side by side.
 2. **Warm filter cost depends on the column, not only on n.** For `categoria` (10 distinct values),
    a warm filter is 5–9 ms at 600k. For `name contains`, every name is distinct, so the per-code
    memo doesn't help: 100–150 ms warm. Report the column's cardinality next to each filter result.
@@ -109,17 +138,13 @@ serve` (port 5173, serves /data) plus `npm --prefix apps/shop-react run dev` (51
 
 ## Next steps (from the experiment design)
 
-- **Java harness (Playwright for Java):**
-  - New context per cold sample, loops for warming and warm.
-  - Read `window.__shop.queries` and `__shop.log`, plus CDP `Performance.getMetrics` and
-    tracing for GC.
-  - The scripted interaction is: search → category → sort by price → page 2. The scratchpad
-    puppeteer script `shop.mjs` is the JS prototype of it.
+The harness (Playwright for Java, Maven) is in place: see [harness.md](harness.md).
+
 - **Optional JIT control:** `--js-flags=--max-opt=0` (or `--no-opt`).
 - **Hydration condition:** needs a Next.js variant of the React shop. The SPA has no hydration step.
 - **Main sweep:**
   - Both frameworks (plus `/angular-zone/` as the control).
-  - 10k / 100k / 600k rows (`?data=/data/produtos-50k.bin`-style files).
+  - 10k / 100k / 600k rows (`npm run data:10k`, `data:100k`; harness `--data`).
   - Conditions `empty`, `logged`, `full`.
-  - Cold and warm, numeric and SKU comparators, all four strategies.
+  - Cold, warming and warm; all three search modes; all four strategies.
 - **Possible addition:** TanStack's `experimental-worker-plugin` as a fifth strategy.
