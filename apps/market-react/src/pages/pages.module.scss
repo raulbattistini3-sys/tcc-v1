@@ -1,0 +1,93 @@
+@use "tokens" as t;
+@use "market" as m;
+
+.product {
+  @include m.product-page;
+}
+.gallery {
+  @include m.gallery;
+}
+.thumbs {
+  @include m.gallery-thumbs;
+}
+.thumb {
+  @include m.gallery-thumb;
+}
+.main {
+  @include m.gallery-main;
+}
+.buy {
+  @include m.buy-box;
+}
+.name {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+.meta {
+  @include m.status-line;
+}
+.listPrice {
+  @include m.list-price;
+}
+.price {
+  @include m.price;
+  font-size: 32px;
+}
+.discount {
+  @include m.discount;
+}
+.installments {
+  @include m.installments;
+  font-size: 14px;
+}
+.shipping {
+  @include m.shipping;
+  font-size: 14px;
+}
+.qty {
+  @include m.qty;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: t.$space;
+}
+.description {
+  line-height: 1.6;
+  color: #343a40;
+}
+.cart {
+  @include m.cart;
+}
+.line {
+  @include m.cart-line;
+}
+.lineImage {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.lineName {
+  font-size: 14px;
+}
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  margin: t.$space 0;
+}
+.total {
+  font-size: 20px;
+  font-weight: 600;
+}
+.empty {
+  padding: t.$space * 6 0;
+  text-align: center;
+  color: m.$muted;
+}
+.heading {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 t.$space * 2;
+}

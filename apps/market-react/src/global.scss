@@ -1,0 +1,16 @@
+@use "tokens" as t;
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: t.$surface;
+  font-family: t.$font;
+  color: #1b1f24;
+}
+
+a {
+  color: t.$brand;
+}

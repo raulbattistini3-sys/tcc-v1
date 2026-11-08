@@ -1,0 +1,64 @@
+@use "tokens" as t;
+@use "market" as m;
+
+.appbar {
+  @include m.appbar;
+}
+.toast {
+  @include m.toast;
+}
+.row {
+  @include m.header-row;
+}
+.logo {
+  @include m.logo;
+  grid-area: logo;
+}
+.search {
+  @include m.search;
+  grid-area: search;
+}
+.searchInput {
+  flex: 1;
+}
+.actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: t.$space;
+  justify-self: end;
+}
+.badgeHost {
+  position: relative;
+  display: inline-flex;
+}
+.badge {
+  @include m.cart-badge;
+}
+.user {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.nav {
+  background: #fff;
+  border-bottom: 1px solid m.$line;
+}
+.navInner {
+  @include m.category-nav;
+}
+.main {
+  @include m.page;
+  min-height: 70vh;
+}
+.footer {
+  @include m.footer;
+}
+.footerInner {
+  @include m.page;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: t.$space;
+}
