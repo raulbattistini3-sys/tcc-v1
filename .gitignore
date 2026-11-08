@@ -15,3 +15,8 @@ apps/*/out-tsc/
 # harness
 harness/target/
 results/
+
+# credentials and local notes: never committed (output.txt held a database URL with its password)
+.env
+*.env.local
+output.txt
