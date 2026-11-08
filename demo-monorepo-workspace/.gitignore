@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.local
+*.log
+# a throwaway local Postgres for the server's tests (apps/server/test/README.md)
+.pgdata/

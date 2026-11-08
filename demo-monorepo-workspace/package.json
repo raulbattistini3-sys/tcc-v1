@@ -1,0 +1,21 @@
+{
+  "name": "tcc-demo-monorepo-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Records the thesis's sweeps, the WebExtension's telemetry uploads and the scraped store listings in Postgres, with a dashboard to browse them.",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @tcc/server --filter @tcc/web dev",
+    "dev:server": "pnpm --filter @tcc/server dev",
+    "dev:web": "pnpm --filter @tcc/web dev",
+    "build": "pnpm --filter @tcc/web build",
+    "start": "pnpm --filter @tcc/server start",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @tcc/server test",
+    "db:generate": "pnpm --filter @tcc/server db:generate",
+    "db:migrate": "pnpm --filter @tcc/server db:migrate"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "@tcc/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Express + Drizzle service that stores the extension's telemetry uploads, the sweeps and the scraped listings in Postgres. Replaces the Go log-listener (same /ingest protocol).",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --env-file-if-exists=.env.test --test test/*.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@tcc/contracts": "workspace:*",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.3",
+    "express": "^5.1.0",
+    "pg": "^8.23.0",
+    "pino-http": "^10.4.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

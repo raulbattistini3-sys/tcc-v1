@@ -1,0 +1,26 @@
+{
+  "name": "@tcc/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dashboard over the server: sweeps with per-cell percentiles, scraped listings by site, telemetry uploads.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.5",
+    "@tcc/contracts": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^6.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5"
+  }
+}
