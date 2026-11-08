@@ -1,0 +1,4 @@
+# Its own pnpm project (not part of demo-monorepo-workspace); this file only carries pnpm settings.
+# pnpm runs no dependency install scripts unless listed here. esbuild's checks its binary (used by tsx).
+allowBuilds:
+  esbuild: true

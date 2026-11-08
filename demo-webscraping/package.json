@@ -1,0 +1,24 @@
+{
+  "name": "tcc-demo-webscraping",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reads product listing pages of real Brazilian stores with Selenium (Chrome), politely: robots.txt honored, one page at a time, stops at captchas and blocks. Listing records only.",
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "scrape": "tsx --env-file-if-exists=.env src/cli.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.5",
+    "@tcc/contracts": "link:../demo-monorepo-workspace/packages/contracts",
+    "selenium-webdriver": "^4.52.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/selenium-webdriver": "^4.35.7",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
