@@ -7,3 +7,5 @@ dist/
 .pgdata/
 # uploads the server keeps on disk before the database (apps/server/src/lib/spool.ts)
 apps/server/spool/
+# the extension's uploads as log<ms>.json files (apps/server/src/lib/telemetry-log.ts)
+apps/server/logs/

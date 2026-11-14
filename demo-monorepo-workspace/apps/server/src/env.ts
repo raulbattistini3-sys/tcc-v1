@@ -27,6 +27,9 @@ const Env = z.object({
   PUBLIC_READS: z.enum(["0", "1"]).default("0"),
   // uploads (sweeps, scrapes) are written here before the database; relative to apps/server
   SPOOL_DIR: z.string().default("spool"),
+  // the extension's uploads, one log<Date.now()>.json a second (seconds without uploads write nothing);
+  // relative to apps/server; empty turns it off
+  TELEMETRY_LOG_DIR: z.string().default("logs"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "silent"]).default("info"),
 });
 

@@ -4,6 +4,7 @@ import { ExtensionUpload } from "@tcc/contracts";
 import type { Db } from "../db/client.js";
 import { ingestBatches, telemetryEvents } from "../db/schema.js";
 import { handle, page, rateLimit } from "../lib/http.js";
+import type { TelemetryLog } from "../lib/telemetry-log.js";
 
 // POST /ingest: the WebExtension's uploads, the old log-listener's protocol (v: 1, kind, batches or
 // events), 204 when stored. The body is kept twice (text, exact; jsonb, queryable), and its events are
@@ -14,7 +15,7 @@ import { handle, page, rateLimit } from "../lib/http.js";
 const MAX_BODY = "2mb";
 const RATE_PER_MIN = 240;
 
-export function ingestRoutes(db: Db, auth: express.RequestHandler, readAuth: express.RequestHandler) {
+export function ingestRoutes(db: Db, auth: express.RequestHandler, readAuth: express.RequestHandler, telemetryLog?: TelemetryLog) {
   const r = Router();
 
   r.post(
@@ -39,6 +40,16 @@ export function ingestRoutes(db: Db, auth: express.RequestHandler, readAuth: exp
       }
       const u = env.data;
       const events = (u.events?.length ?? 0) + (u.batches ?? []).reduce((n, b) => n + b.events.length, 0);
+      // to disk first (readable JSON, one file a second), so a database failure below loses nothing there
+      telemetryLog?.push({
+        receivedAt: new Date().toISOString(),
+        ip: req.ip ?? null,
+        kind: u.kind,
+        installId: u.installId ?? null,
+        label: u.label ?? null,
+        events,
+        body: parsed,
+      });
 
       const result = await db.execute<{ id: string; events: number }>(sql`
         WITH b AS (

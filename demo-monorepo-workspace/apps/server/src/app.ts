@@ -10,12 +10,15 @@ import { ingestRoutes } from "./routes/ingest.js";
 import { sweepRoutes } from "./routes/sweeps.js";
 import { scrapeRoutes } from "./routes/scrapes.js";
 import { Spool } from "./lib/spool.js";
+import type { TelemetryLog } from "./lib/telemetry-log.js";
 
 // `spool`: where uploads are kept on disk before the database (index.ts passes SPOOL_DIR; tests get a temp dir)
 export function createApp(
   db: Db,
   config: Pick<Config, "token" | "origins" | "PUBLIC_READS" | "LOG_LEVEL">,
   spool = new Spool(join(tmpdir(), "tcc-spool")),
+  // the extension's uploads as log<ms>.json files (index.ts passes TELEMETRY_LOG_DIR; none in tests)
+  telemetryLog?: TelemetryLog,
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -29,7 +32,7 @@ export function createApp(
   app.get("/health", (_req, res) => {
     res.type("text").send("ok");
   });
-  app.use(ingestRoutes(db, auth, readAuth));
+  app.use(ingestRoutes(db, auth, readAuth, telemetryLog));
   app.use(sweepRoutes(db, spool, auth, readAuth));
   app.use(scrapeRoutes(db, spool, auth, readAuth));
   app.use((_req, res) => {
