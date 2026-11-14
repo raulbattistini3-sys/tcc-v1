@@ -22,7 +22,8 @@ import java.util.Map;
  * </pre>
  *
  * Writes results/&lt;runId&gt;/queries.csv (one row per measured query), run.json
- * (machine, browser, commit, arguments) and, with --trace, one Chrome trace per sample.
+ * (machine, browser, commit, arguments) and, with --trace, one Chrome trace per sample. With --post, the
+ * CSV then goes to the demo-monorepo-workspace server through tools/upload-sweep.mjs.
  */
 public final class Main {
   public static void main(String[] args) throws Exception {
@@ -74,7 +75,24 @@ public final class Main {
       }
       browser.close();
       System.out.println("wrote " + out.resolve("queries.csv"));
+      String rel = repo.relativize(out).toString().replace(java.io.File.separatorChar, '/');
+      if (cfg.post()) upload(repo, rel);
+      else System.out.println("to store it in the database: node tools/upload-sweep.mjs " + rel);
     }
+  }
+
+  /**
+   * tools/upload-sweep.mjs sends queries.csv to the demo-monorepo-workspace server. The CSV is already on
+   * disk, so a failed upload loses nothing: the script says so and can be run again by hand.
+   */
+  private static void upload(Path repo, String runDir) throws IOException, InterruptedException {
+    System.out.println("uploading to the server (tools/upload-sweep.mjs)");
+    int code = new ProcessBuilder("node", "tools/upload-sweep.mjs", runDir)
+        .directory(repo.toFile())
+        .inheritIO()
+        .start()
+        .waitFor();
+    if (code != 0) System.out.println("upload incomplete; the run is safe in " + runDir + ". Retry: node tools/upload-sweep.mjs " + runDir);
   }
 
   record Key(String app, String cond, String strategy, String match, String data, int throttle, int sample) {
