@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "catalog": "tsx --env-file-if-exists=.env src/catalog.ts",
     "db:generate": "drizzle-kit generate --name catalog",
-    "db:migrate": "tsx --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate": "tsx --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate",
+    "sweep": "tsx --env-file-if-exists=.env src/sweep.ts"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.7.5",

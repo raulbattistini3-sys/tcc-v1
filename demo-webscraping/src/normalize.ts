@@ -70,6 +70,11 @@ const BLOCK_TEXT = [
   "slide to verify",
   "deslize para verificar",
   "please enable cookies",
+  "no eres un robot",
+  "no soy un robot",
+  "verifica que eres humano",
+  "tráfico inusual",
+  "acceso denegado",
 ];
 
 /** Why a page shouldn't be read any further, or null when it can be. */

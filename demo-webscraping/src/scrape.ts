@@ -20,10 +20,11 @@ export type RunOptions = { pages: number; headed: boolean; startUrl?: string; lo
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function openChrome(headed: boolean): Promise<{ driver: WebDriver; userAgent: string }> {
+/** Chrome with a fresh profile; `lang` sets the UI language and Accept-Language (the store sees a local reader). */
+export async function openChrome(headed: boolean, lang = "pt-BR"): Promise<{ driver: WebDriver; userAgent: string }> {
   const opts = new chrome.Options();
   if (!headed) opts.addArguments("--headless=new");
-  opts.addArguments("--window-size=1366,900", "--lang=pt-BR", "--no-first-run", "--disable-extensions");
+  opts.addArguments("--window-size=1366,900", `--lang=${lang}`, "--no-first-run", "--disable-extensions");
   // return at DOMContentLoaded instead of waiting for every image and tracker; settle() then waits
   // for the product links themselves
   opts.setPageLoadStrategy("eager");
@@ -32,7 +33,7 @@ async function openChrome(headed: boolean): Promise<{ driver: WebDriver; userAge
   // Chrome's own user agent with our token appended: a real browser, honestly labeled
   const base = (await driver.executeScript<string>("return navigator.userAgent")).replace("HeadlessChrome", "Chrome");
   const userAgent = `${base} ${BOT_INFO}`;
-  await (driver as chrome.Driver).sendDevToolsCommand("Network.setUserAgentOverride", { userAgent, acceptLanguage: "pt-BR,pt;q=0.9" });
+  await (driver as chrome.Driver).sendDevToolsCommand("Network.setUserAgentOverride", { userAgent, acceptLanguage: `${lang},${lang.split("-")[0]};q=0.9` });
   return { driver, userAgent };
 }
 
