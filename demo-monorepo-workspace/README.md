@@ -45,7 +45,35 @@ Settings → Collector URL to `http://<this machine>:8787/ingest` with the same 
 
 Keep credentials in `.env` files (git-ignored), never in tracked files or notes at the repo root.
 
+## Uploads are kept on disk first
+
+`POST /sweeps`, `POST /sweeps/:id/results` and `POST /scrapes` validate the body, write it to
+`apps/server/spool/pending/<kind>/` (`SPOOL_DIR`), and only then write to Postgres. On success the file
+moves to `spool/stored/`. If the database fails (down, unmigrated, out of space), the answer is
+**202** `{ stored: false, spooled }` instead of 500: the upload is safe on disk, and the client must
+not send it again. Put it in the database later:
+
+```sh
+pnpm spool:replay            # pending/ → database, oldest first; --dry-run just counts
+```
+
+The server prints how many uploads are pending when it starts. Uploads the database will never take
+(an unknown run id, an invalid body) go to `spool/rejected/`.
+
 ## Sending a sweep
+
+From the harness: `--post` at the end of a run, or for any run already on disk:
+
+```sh
+node tools/upload-sweep.mjs results/<runId>     # from the repo root; --dry-run, --force
+```
+
+It makes one sweep run per (app, cond, match, data, throttle), writes the exact bodies to
+`results/<runId>/sweep-upload.json`, and records the server's answer per group in `uploaded.json`, so
+running it again sends only what is missing. The token comes from `--token`, `TCC_TOKEN`, or this
+server's `apps/server/.env`.
+
+From a page, by hand:
 
 ```ts
 import type { SweepUpload } from "@tcc/contracts";
