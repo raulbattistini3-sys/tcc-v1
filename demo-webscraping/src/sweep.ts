@@ -10,6 +10,7 @@
 //   pnpm sweep                         the first 200 stores (pt, then en; es left for later)
 //   pnpm sweep --from 200 --count 100  the remaining 100
 //   pnpm sweep --run <runId>           resume a run: stores already in sites.jsonl are skipped
+//   pnpm sweep --run <runId> --retry-errors   visit again the stores that ended in "error"
 //   pnpm sweep --workers 4 --headed
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -40,6 +41,7 @@ const { values } = parseArgs({
     run: { type: "string" },
     out: { type: "string", default: "results/sweep" },
     headed: { type: "boolean", default: false },
+    "retry-errors": { type: "boolean", default: false },
   },
 });
 
@@ -55,7 +57,13 @@ const sitesFile = join(dir, "sites.jsonl");
 const productsFile = join(dir, "products.jsonl");
 
 const done = new Set<string>();
-if (existsSync(sitesFile)) for (const line of (await readFile(sitesFile, "utf8")).split("\n")) if (line.trim()) done.add(JSON.parse(line).url);
+if (existsSync(sitesFile))
+  for (const line of (await readFile(sitesFile, "utf8")).split("\n")) {
+    if (!line.trim()) continue;
+    const r = JSON.parse(line) as { url: string; status: string };
+    if (values["retry-errors"] && r.status === "error") done.delete(r.url);
+    else done.add(r.url);
+  }
 const queue = picked.filter((s) => !done.has(s.url));
 console.log(`run ${runId}: ${picked.length} stores (#${from}–#${from + picked.length - 1}), ${done.size} already done, ${queue.length} to visit → ${dir}`);
 
@@ -183,7 +191,11 @@ async function worker(id: number) {
 await Promise.all(Array.from({ length: Math.max(1, Number(values.workers)) }, (_, i) => worker(i + 1)));
 await writes;
 manifest.finishedAt = new Date().toISOString();
-const lines = (await readFile(sitesFile, "utf8")).split("\n").filter(Boolean).map((l) => JSON.parse(l) as { status: string; cards?: number });
+// a retried store has several lines; the last one wins, and the file is rewritten with one line per store
+const latest = new Map<string, string>();
+for (const l of (await readFile(sitesFile, "utf8")).split("\n").filter(Boolean)) latest.set((JSON.parse(l) as { url: string }).url, l);
+await writeFile(sitesFile, [...latest.values()].join("\n") + "\n");
+const lines = [...latest.values()].map((l) => JSON.parse(l) as { status: string; cards?: number });
 manifest.counts = { stores: lines.length, products: lines.reduce((n, l) => n + (l.cards ?? 0), 0) };
 for (const l of lines) manifest.counts[l.status] = (manifest.counts[l.status] ?? 0) + 1;
 await writeFile(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));

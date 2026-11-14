@@ -116,6 +116,7 @@ en-US, es-ES).
 pnpm sweep                               # stores #0–#199 (pt + en); es is left for later
 pnpm sweep --from 200 --count 100        # the other 100
 pnpm sweep --run <runId>                 # resume: stores already in sites.jsonl are skipped
+pnpm sweep --run <runId> --retry-errors  # visit again the stores that ended in "error" (timeouts)
 pnpm sweep --workers 4 --headed
 ```
 
