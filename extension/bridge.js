@@ -22,6 +22,12 @@ function getPort() {
   return port;
 }
 
+/** @param {string} url */
+function stripQuery(url) {
+  const i = url.search(/[?#]/);
+  return i < 0 ? url : url.slice(0, i);
+}
+
 /**
  * @param {unknown} e
  * @returns {e is { source: string, type: string, ts: number, data: Record<string, unknown> }}
@@ -54,13 +60,19 @@ window.addEventListener("message", (e) => {
     // Round-trip through JSON: drops functions, prototypes and anything exotic.
     const json = JSON.stringify(ev);
     if (json.length > MAX_EVENT_BYTES) continue;
-    events.push(JSON.parse(json));
+    const clean = JSON.parse(json);
+    // Live sites load third-party scripts whose URLs can carry IDs: keep origin + path.
+    if (Array.isArray(clean.data.scripts)) {
+      for (const sc of clean.data.scripts) if (sc && typeof sc.url === "string") sc.url = stripQuery(sc.url);
+    }
+    events.push(clean);
   }
   if (events.length === 0) return;
 
   try {
     // Origin + path only: query strings can carry tokens or personal data.
-    getPort().postMessage({ world, page: location.origin + location.pathname, events });
+    // timeOrigin lets the collector turn event `ts` (ms since navigation) into wall-clock time.
+    getPort().postMessage({ world, page: location.origin + location.pathname, timeOrigin: performance.timeOrigin, events });
   } catch {
     port = null;
   }

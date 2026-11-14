@@ -1,0 +1,35 @@
+@use "market" as m;
+
+.hero {
+  @include m.hero;
+}
+.track {
+  @include m.hero-track;
+}
+.slide {
+  @include m.hero-slide;
+}
+.heroTitle {
+  @include m.hero-title;
+}
+.heroCta {
+  align-self: flex-start;
+}
+.dots {
+  @include m.hero-dots;
+}
+.dot {
+  @include m.hero-dot;
+}
+.title {
+  @include m.section-title;
+}
+.tiles {
+  @include m.tiles;
+}
+.tile {
+  @include m.tile;
+}
+.tileImage {
+  @include m.tile-image;
+}

@@ -1,0 +1,32 @@
+@use "@angular/material" as mat;
+@use "tokens" as t;
+
+// M3 theme from the same brand tokens the React app gives MUI (via Pigment, at build time). Both end up
+// as static CSS: Angular Material compiles here, MUI is extracted by Pigment.
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$blue-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: (
+        plain-family: t.$font,
+        brand-family: t.$font,
+      ),
+      density: 0,
+    )
+  );
+}
+
+body {
+  margin: 0;
+  background: t.$surface;
+  font-family: t.$font;
+  color: #1b1f24;
+}
+
+a {
+  color: t.$brand;
+}

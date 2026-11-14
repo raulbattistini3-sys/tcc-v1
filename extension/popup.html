@@ -9,6 +9,11 @@
   <body>
     <h1>Scheduler telemetry</h1>
     <p id="page" class="muted"></p>
+    <p id="site" class="note" hidden>
+      Not collecting on this site.
+      <button id="enable-site">Enable on this site</button>
+    </p>
+    <p id="upload" class="muted"></p>
     <h2>Main-thread blocking by script origin</h2>
     <table id="attribution"></table>
     <h2>Events</h2>
@@ -18,7 +23,9 @@
     <div class="row">
       <button id="refresh">Refresh</button>
       <button id="export">Export JSON</button>
+      <button id="send">Send to collector</button>
       <button id="clear">Clear</button>
+      <button id="options">Settings</button>
     </div>
   </body>
 </html>

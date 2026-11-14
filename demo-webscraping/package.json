@@ -1,0 +1,32 @@
+{
+  "name": "tcc-demo-webscraping",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reads product listing pages of real Brazilian stores with Selenium (Chrome), politely: robots.txt honored, one page at a time, stops at captchas and blocks. Listing records only.",
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "scrape": "tsx --env-file-if-exists=.env src/cli.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "catalog": "tsx --env-file-if-exists=.env src/catalog.ts",
+    "db:generate": "drizzle-kit generate --name catalog",
+    "db:migrate": "tsx --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate",
+    "sweep": "tsx --env-file-if-exists=.env src/sweep.ts"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.5",
+    "@tcc/contracts": "link:../demo-monorepo-workspace/packages/contracts",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
+    "selenium-webdriver": "^4.52.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.23.1",
+    "@types/selenium-webdriver": "^4.35.7",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

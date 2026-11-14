@@ -1,0 +1,40 @@
+@use "tokens" as t;
+@use "market" as m;
+
+.layout {
+  @include m.listing;
+}
+.filters {
+  @include m.filters;
+}
+.filterTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 t.$space;
+}
+.priceRow {
+  @include m.price-row;
+}
+.head {
+  @include m.results-head;
+}
+.heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.status {
+  @include m.status-line;
+}
+.gridHost {
+  position: relative;
+  width: 100%;
+}
+.row {
+  @include m.grid-row;
+}
+.empty {
+  padding: t.$space * 6 0;
+  text-align: center;
+  color: m.$muted;
+}

@@ -43,7 +43,10 @@ function originOf(url) {
 async function refresh() {
   /** @type {{ page: string, events: StoredEvent[] }} */
   const log = await chrome.runtime.sendMessage({ type: "get", tabId });
-  $("page").textContent = log.page ? `${log.page} · ${log.events.length} events` : "No telemetry from this tab yet.";
+  $("page").textContent = log.page
+    ? `${log.page} · ${log.events.length} events`
+    : "No telemetry from this tab yet. If the site is enabled, reload the tab: the probe sends one page event after load, " +
+      "then long frames (> 50 ms) and slow interactions (≥ 16 ms) as they happen.";
 
   // Count each frame once: prefer the bundle's copy, fall back to the probe's.
   const frames = log.events.filter((e) => e.type === "frame");
@@ -79,7 +82,37 @@ async function refresh() {
   );
 }
 
-$("refresh").addEventListener("click", refresh);
+/** Shows whether this tab's origin is covered and how the upload is doing. */
+async function status() {
+  const st = await chrome.runtime.sendMessage({ type: "status" });
+  const u = st.upload;
+  $("upload").textContent = !st.settings.uploadEnabled
+    ? "Streaming is off: tick “Stream events to the collector” in Settings and Save. (Test connection works without it.)"
+    : u.lastError
+      ? `Upload failing: ${u.lastError} · ${u.queued} queued`
+      : `Uploading to ${st.settings.collectorUrl} · ${u.sent} sent, ${u.queued} queued${u.dropped ? `, ${u.dropped} dropped` : ""}`;
+
+  let pattern = "";
+  try {
+    const url = new URL(tab?.url ?? "");
+    if (url.protocol === "http:" || url.protocol === "https:") pattern = `${url.protocol}//${url.hostname}/*`;
+  } catch {}
+  const covered = pattern !== "" && (await chrome.permissions.contains({ origins: [pattern] }));
+  $("site").hidden = pattern === "" || covered;
+  $("enable-site").onclick = async () => {
+    // The background listens for permissions.onAdded and registers the content scripts.
+    if (await chrome.permissions.request({ origins: [pattern] })) {
+      $("site").textContent = "Enabled. Reload the tab to start collecting.";
+    }
+  };
+}
+
+$("refresh").addEventListener("click", () => (refresh(), status()));
+$("options").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("send").addEventListener("click", async () => {
+  const r = await chrome.runtime.sendMessage({ type: "send-snapshot", tabId });
+  $("upload").textContent = r.ok ? `Sent ${r.n} events to the collector.` : `Send failed: ${r.error}`;
+});
 $("clear").addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "clear", tabId });
   refresh();
@@ -93,5 +126,6 @@ $("export").addEventListener("click", async () => {
 });
 
 refresh();
+status();
 
 export {};

@@ -20,6 +20,8 @@ import java.util.List;
  *   --base-url http://host:port         use a server already running instead
  *   --channel chrome|chromium|msedge    --headed
  *   --out results
+ *   --post                              at the end, send queries.csv to the demo-monorepo-workspace
+ *                                       server (POST /sweeps) with tools/upload-sweep.mjs
  * </pre>
  */
 public record Config(
@@ -42,7 +44,8 @@ public record Config(
     boolean headed,
     Path out,
     long stepTimeoutMs,
-    int probeDelayMs) {
+    int probeDelayMs,
+    boolean post) {
 
   /** Shops' search debounce (apps/shared/catalog.js SEARCH_DEBOUNCE_MS). */
   public static final int SEARCH_DEBOUNCE_MS = 250;
@@ -70,7 +73,8 @@ public record Config(
             a.flag("--headed"),
             Path.of(a.string("--out", "results")),
             a.integer("--step-timeout", 180) * 1000L,
-            a.integer("--probe-delay", 30));
+            a.integer("--probe-delay", 30),
+            a.flag("--post"));
     a.rejectUnknown();
     return c;
   }

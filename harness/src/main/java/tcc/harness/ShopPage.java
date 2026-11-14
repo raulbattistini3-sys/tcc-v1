@@ -110,6 +110,10 @@ public final class ShopPage implements AutoCloseable {
 
     waitPainted(n);
     Map<String, Double> m1 = metrics();
+    // PerformanceObserver callbacks (LoAF, Event Timing) are delivered after the frame
+    // that ends the long task. React marks "painted" from a passive effect that can
+    // run before that delivery; reading at once would miss the entries for this step.
+    settle();
     @SuppressWarnings("unchecked")
     var summary = (Map<String, Object>) page.evaluate(SUMMARY_JS, List.of(n, since));
 

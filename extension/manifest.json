@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "TCC Scheduler Telemetry",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "description": "Collects main-thread and scheduler telemetry from pages running the adaptive scheduler bundle.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": ["http://localhost/*", "http://127.0.0.1/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "popup.html", "default_title": "Scheduler telemetry" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
   "content_scripts": [
     {
       "matches": ["http://localhost/*", "http://127.0.0.1/*"],

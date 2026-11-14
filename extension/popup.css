@@ -7,5 +7,7 @@ h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 td, th { padding: 2px 4px; border-bottom: 1px solid var(--line); text-align: left; }
 td.num, th.num { text-align: right; }
-.row { display: flex; gap: 8px; margin-top: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.note { margin: 6px 0; padding: 6px; border: 1px solid var(--line); border-radius: 4px; }
+.note button { margin-left: 6px; }
 button { font: inherit; padding: 4px 10px; }

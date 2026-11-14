@@ -6,6 +6,12 @@ main non-documentation features added in the merged e-commerce shops PR.
 
 ## What the current results say
 
+> **Nov 8, 2026, from a real application.** The core now runs the Sample ERP's product list (600k
+> products). There, the cold run went from ~4 s to ~2.4 s and the second run from ~45 ms to ~24 ms, in a
+> build that added a WebSocket transport, a server fallback while the worker warms up, a SKU index and
+> narrowing. The cold cost turned out to be index building (1.4 s), not JIT warm-up (6 ms on a second
+> run). Details, and the A/B needed to credit the socket alone: [sample-erp-findings.md](sample-erp-findings.md).
+
 The results recorded in `docs/shops.md` and `docs/harness.md` are early smoke
 measurements, not a completed benchmark campaign. The harness documentation
 describes one run on an 8-core machine with Chrome 156, no CPU throttling, and

@@ -13,6 +13,8 @@
 //   /react/    apps/shop-react/dist           (npm run build in apps/shop-react)
 //   /angular/  apps/shop-angular/dist/browser (npm run build in apps/shop-angular)
 //   /angular-zone/  same app with zone.js     (npm run build:zone)
+//   /market-react/    apps/market-react/dist             (the marketplace apps, docs/markets.md)
+//   /market-angular/  apps/market-angular/dist/browser
 //
 // base-uri is 'self', not 'none': Angular needs its <base href>.
 //
@@ -55,6 +57,8 @@ const MOUNTS = {
   "/react/": "apps/shop-react/dist",
   "/angular/": "apps/shop-angular/dist/browser",
   "/angular-zone/": "apps/shop-angular/dist-zone/browser",
+  "/market-react/": "apps/market-react/dist",
+  "/market-angular/": "apps/market-angular/dist/browser",
 };
 
 const TYPES = {
@@ -78,7 +82,7 @@ createServer(async (req, res) => {
     res.writeHead(302, { Location: "/demo/" + url.search }).end();
     return;
   }
-  if (path === "/react" || path === "/angular" || path === "/angular-zone") {
+  if (Object.keys(MOUNTS).some((m) => path === m.slice(0, -1))) {
     res.writeHead(302, { Location: path + "/" + url.search }).end();
     return;
   }

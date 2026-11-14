@@ -1,0 +1,66 @@
+@use "market" as m;
+
+.card {
+  @include m.card;
+}
+.area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  // ButtonBase centers its content; a card without a list price would start with a gap above the image
+  justify-content: flex-start;
+}
+.image {
+  @include m.card-image;
+}
+.body {
+  @include m.card-body;
+}
+.name {
+  @include m.card-name;
+}
+.listPrice {
+  @include m.list-price;
+}
+.price {
+  @include m.price;
+}
+.discount {
+  @include m.discount;
+}
+.installments {
+  @include m.installments;
+}
+.shipping {
+  @include m.shipping;
+}
+.stars {
+  @include m.stars;
+}
+.glyphs {
+  @include m.stars-glyphs;
+}
+.fill {
+  @include m.stars-fill;
+}
+.title {
+  @include m.section-title;
+}
+.rail {
+  @include m.rail;
+}
+.viewport {
+  @include m.rail-autoplay-viewport;
+}
+.track {
+  display: flex;
+  gap: 16px;
+  will-change: transform;
+  > * {
+    flex: 0 0 200px;
+  }
+}
+.placeholder {
+  height: 392px;
+}

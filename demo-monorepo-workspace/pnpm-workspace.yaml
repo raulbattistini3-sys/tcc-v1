@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+# pnpm runs no dependency install scripts unless listed here. esbuild's checks its platform binary
+# (used by tsx, Vite and drizzle-kit).
+allowBuilds:
+  esbuild: true
