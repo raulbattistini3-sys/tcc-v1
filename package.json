@@ -11,6 +11,7 @@
     "serve:strict": "node tools/serve.mjs --csp strict",
     "serve:no-worker": "node tools/serve.mjs --csp no-worker",
     "serve:coi": "node tools/serve.mjs --coi --csp strict",
+    "collector": "node tools/collector.mjs",
     "test": "node --test \"test/*.test.js\"",
     "check": "tsc -p jsconfig.json",
     "shops:install": "npm --prefix apps/shop-react install && npm --prefix apps/shop-angular install",

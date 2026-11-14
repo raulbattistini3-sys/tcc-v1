@@ -16,6 +16,11 @@ apps/*/out-tsc/
 harness/target/
 results/
 
+# Go log listener: keep the source, ignore its output and binary
+log-listener/out/
+log-listener/*.exe
+log-listener/log-listener
+
 # credentials and local notes: never committed (output.txt held a database URL with its password)
 .env
 *.env.local
