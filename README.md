@@ -27,7 +27,38 @@ npm run serve        # http://localhost:5173/
 | `node tools/bench-node.mjs` | Rough `runOp` timings outside the browser |
 
 Load the extension: `chrome://extensions` → Developer mode → Load unpacked →
-`extension/`. It listens on `localhost` / `127.0.0.1` only.
+`extension/`. It always runs on `localhost` / `127.0.0.1`; other sites are
+opt-in per origin (popup → "Enable on this site", or Settings → Live sites).
+
+Remote logs: run `npm run collector` on the receiving machine (listens on
+`0.0.0.0:8787`, prints the URL and token), paste both into the extension's
+Settings and tick "Stream events". Requests are appended to
+`results/live/<date>.ndjson`. Plain HTTP: use it on a LAN or through a TLS
+tunnel (Tailscale, cloudflared), not a raw port-forward.
+
+`log-listener/` is the same collector in Go (standard library only), for a
+machine without Node:
+
+```
+cd log-listener
+go run .                                  # 0.0.0.0:8787, random token, writes out/log-<timestamp>.log
+go run . -token s3cret -out ../results/live
+go build -o log-listener.exe .            # single binary, same flags
+```
+
+| Flag | Default | |
+|---|---|---|
+| `-port` | `8787` | TCP port |
+| `-host` | `0.0.0.0` | interface to bind; `127.0.0.1` = this machine only |
+| `-token` | `$TCC_TOKEN` or random | bearer token the extension must send |
+| `-out` | `out` | directory for the log files |
+
+A new file starts each minute (UTC): `log-2026-11-07T10-32Z.log`, created
+only when a request arrives, so idle minutes leave no files. Each line is one
+JSON object `{receivedAt, ip, body}` with the request body stored verbatim.
+`GET /health` returns `ok`. Other machines need an inbound firewall rule for
+the port (Windows: `New-NetFirewallRule -DisplayName "TCC collector"
+-Direction Inbound -Protocol TCP -LocalPort 8787 -Action Allow -Profile Private`).
 
 ## E-commerce shops (React and Angular)
 
@@ -55,7 +86,8 @@ src/
   index.js               start(): wires it all together
 demo/                    virtual table, jank meter, load generator, benchmark → CSV
 extension/               MV3: MAIN-world probe, ISOLATED bridge, service worker, popup
-tools/                   converter, dev server, node benchmark
+tools/                   converter, dev server, node benchmark, Node collector
+log-listener/            Go collector for the extension's remote upload
 docs/design-notes.md     CSP, worlds, gateway/MITM, Go → JS mapping
 ```
 
