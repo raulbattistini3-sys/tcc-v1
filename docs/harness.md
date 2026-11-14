@@ -29,7 +29,8 @@ cd harness
 ./mvnw -q compile exec:java -Dexec.args="--apps react,angular --strategies main,worker --samples 5 --trace"
 ```
 
-(`mvnw.cmd` from cmd/PowerShell.) The wrapper downloads Maven 3.9.16 on first
+(`mvnw.cmd` from cmd/PowerShell, where the argument needs quotes as a whole:
+`.\mvnw.cmd -q compile exec:java "-Dexec.args=--apps react,angular --samples 5 --post"`.) The wrapper downloads Maven 3.9.16 on first
 use. Chrome comes from the local install (`--channel chrome`), and no browser
 is downloaded. `--channel chromium` uses Playwright's bundled build instead.
 
@@ -38,6 +39,20 @@ Output in `results/<runId>/` (git-ignored):
 - `run.json` — commit (with `-dirty`), OS, cores, Chrome version, arguments
 - `traces/*.json` — one Chrome trace per sample, with `--trace`
 - `errors.log` — failed samples (timeouts, crashes); the run continues
+
+### Storing a run in the database
+
+The CSV is the record. To also put it in the demo-monorepo-workspace server's Postgres (Sweeps page),
+add `--post`, or send a run that's already on disk:
+
+```sh
+node tools/upload-sweep.mjs results/<runId>
+```
+
+The server must be running (`pnpm dev:server` in `demo-monorepo-workspace`). A failed upload loses
+nothing. Run the command again and it sends only the groups not yet stored (see `uploaded.json` in the
+run dir). If the server is up but its database isn't, the server keeps the upload on its own disk
+(answer 202) and `pnpm spool:replay` there stores it later.
 
 ### Flags
 
@@ -55,6 +70,7 @@ Output in `results/<runId>/` (git-ignored):
 | `--trace` | off | Chrome trace per sample → GC per thread per query |
 | `--csp` / `--port` | `strict` / `5180` | server the harness starts |
 | `--base-url` | — | use an already-running server instead |
+| `--post` | off | at the end, send `queries.csv` to the server with `tools/upload-sweep.mjs` |
 | `--headed`, `--channel`, `--out`, `--step-timeout` (s), `--probe-delay` (ms) | | |
 
 ## What one sample is
