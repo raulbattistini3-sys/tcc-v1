@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scheduler Telemetry Settings</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      body { width: auto; max-width: 640px; margin: 24px auto; padding: 0 16px; font-size: 13px; }
+      label { display: block; margin: 10px 0 2px; font-weight: 600; }
+      input[type="text"], input[type="password"], input[type="url"] { width: 100%; box-sizing: border-box; font: inherit; padding: 4px 6px; }
+      .check { font-weight: normal; }
+      code { font-size: 12px; }
+    </style>
+    <script type="module" src="options.js"></script>
+  </head>
+  <body>
+    <h1>Scheduler telemetry settings</h1>
+
+    <h2>Remote collector</h2>
+    <p class="muted">
+      Run <code>npm run collector</code> on the receiving machine. It prints the URL and token to paste here.
+    </p>
+    <label for="url">Collector URL</label>
+    <input id="url" type="url" placeholder="http://192.168.1.20:8787/ingest" />
+    <label for="token">Token</label>
+    <input id="token" type="password" autocomplete="off" />
+    <label for="label">Label for this browser (optional)</label>
+    <input id="label" type="text" placeholder="raul-laptop" maxlength="64" />
+    <label class="check"><input id="enabled" type="checkbox" /> Stream events to the collector</label>
+    <div class="row">
+      <button id="save">Save</button>
+      <button id="test">Test connection</button>
+    </div>
+    <p id="msg" class="muted"></p>
+
+    <h2>Live sites</h2>
+    <p class="muted">
+      localhost and 127.0.0.1 are always on. Other sites must be enabled one by one (popup → "Enable on this site", or add
+      one here). Reload a tab after enabling it.
+    </p>
+    <label class="check">
+      <input id="all-sites" type="checkbox" /> Collect on all sites (every http/https page, except the collector)
+    </label>
+    <p class="muted">
+      Pages are probed for timings only (long frames, slow interactions, load timing), but each event carries the
+      page's origin + path, so with streaming on the collector receives a browsing trail.
+    </p>
+    <table id="sites"></table>
+    <div class="row">
+      <input id="new-site" type="url" placeholder="https://www.example.com" style="flex: 1" />
+      <button id="add-site">Add site</button>
+    </div>
+
+    <p class="muted" id="install"></p>
+  </body>
+</html>
