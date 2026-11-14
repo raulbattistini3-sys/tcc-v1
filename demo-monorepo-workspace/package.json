@@ -16,6 +16,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @tcc/server test",
     "db:generate": "pnpm --filter @tcc/server db:generate",
-    "db:migrate": "pnpm --filter @tcc/server db:migrate"
+    "db:migrate": "pnpm --filter @tcc/server db:migrate",
+    "spool:replay": "pnpm --filter @tcc/server spool:replay"
   }
 }

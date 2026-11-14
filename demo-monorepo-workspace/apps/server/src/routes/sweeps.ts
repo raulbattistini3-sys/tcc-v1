@@ -3,22 +3,16 @@ import { desc, eq, sql } from "drizzle-orm";
 import { SweepResultsAppend, SweepUpload } from "@tcc/contracts";
 import type { Db } from "../db/client.js";
 import { sweepResults, sweepRuns } from "../db/schema.js";
+import { appendSweepResults, storeSweep } from "../db/store.js";
 import { handle, page } from "../lib/http.js";
+import type { Spool } from "../lib/spool.js";
+import { spoolThenStore } from "../lib/spooled.js";
 
-// Sweeps: POST a run with its results (the harness at the end of a sweep, the demo's "Run sweep", the
-// shops' window.__shop.queries), then read them back with per-cell percentiles.
+// Sweeps: POST a run with its results (tools/upload-sweep.mjs for the harness, the demo's "Run sweep",
+// the shops' window.__shop.queries), then read them back with per-cell percentiles. Uploads are kept on
+// disk first (lib/spool.ts), so a database failure answers 202 instead of losing the run.
 
-const CHUNK = 1000; // rows per INSERT: ~40 columns × 1000 stays under Postgres's 65,535 parameters
-
-type ResultRow = typeof sweepResults.$inferInsert;
-
-async function insertResults(tx: Pick<Db, "insert">, runId: string, results: ReturnType<typeof SweepUpload.parse>["results"]) {
-  const rows: ResultRow[] = results.map((r) => ({ ...r, runId }));
-  for (let i = 0; i < rows.length; i += CHUNK) await tx.insert(sweepResults).values(rows.slice(i, i + CHUNK));
-  return rows.length;
-}
-
-export function sweepRoutes(db: Db, auth: express.RequestHandler, readAuth: express.RequestHandler) {
+export function sweepRoutes(db: Db, spool: Spool, auth: express.RequestHandler, readAuth: express.RequestHandler) {
   const r = Router();
   const json = express.json({ limit: "25mb" });
 
@@ -26,15 +20,7 @@ export function sweepRoutes(db: Db, auth: express.RequestHandler, readAuth: expr
     "/sweeps",
     auth,
     json,
-    handle(async (req, res) => {
-      const body = SweepUpload.parse(req.body);
-      const out = await db.transaction(async (tx) => {
-        const [run] = await tx.insert(sweepRuns).values(body.run).returning({ id: sweepRuns.id });
-        const n = await insertResults(tx, run!.id, body.results);
-        return { id: run!.id, results: n };
-      });
-      res.status(201).json(out);
-    }),
+    handle((req, res) => spoolThenStore(spool, "sweeps", SweepUpload, req, res, () => storeSweep(db, req.body))),
   );
 
   // more results for a run that's still going (a long sweep uploading as it goes)
@@ -42,16 +28,9 @@ export function sweepRoutes(db: Db, auth: express.RequestHandler, readAuth: expr
     "/sweeps/:id/results",
     auth,
     json,
-    handle(async (req, res) => {
+    handle((req, res) => {
       const id = String(req.params.id);
-      const body = SweepResultsAppend.parse(req.body);
-      const [run] = await db.select({ id: sweepRuns.id }).from(sweepRuns).where(eq(sweepRuns.id, id));
-      if (!run) {
-        res.status(404).type("text").send("no such run");
-        return;
-      }
-      const n = await db.transaction((tx) => insertResults(tx, id, body.results));
-      res.status(201).json({ id, results: n });
+      return spoolThenStore(spool, "sweep-results", SweepResultsAppend, req, res, () => appendSweepResults(db, id, req.body), { runId: id });
     }),
   );
 

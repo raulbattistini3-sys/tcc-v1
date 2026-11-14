@@ -25,6 +25,8 @@ const Env = z.object({
   WEB_ORIGINS: z.string().default("http://localhost:5175"),
   // "1": GET routes need no token (a dashboard on a trusted machine)
   PUBLIC_READS: z.enum(["0", "1"]).default("0"),
+  // uploads (sweeps, scrapes) are written here before the database; relative to apps/server
+  SPOOL_DIR: z.string().default("spool"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "silent"]).default("info"),
 });
 

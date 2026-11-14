@@ -3,30 +3,23 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { ScrapeUpload, Site } from "@tcc/contracts";
 import type { Db } from "../db/client.js";
 import { scrapedListings, scrapeRuns } from "../db/schema.js";
+import { storeScrape } from "../db/store.js";
 import { handle, page } from "../lib/http.js";
+import type { Spool } from "../lib/spool.js";
+import { spoolThenStore } from "../lib/spooled.js";
 
 // Scrape runs from demo-webscraping, with the listings they read. A run is stored even when it read
-// nothing (blocked, disallowed): how often real stores refuse automation is a data point too.
+// nothing (blocked, disallowed): how often real stores refuse automation is a data point too. Uploads
+// are kept on disk first (lib/spool.ts), so a database failure answers 202 instead of losing the run.
 
-const CHUNK = 1000;
-
-export function scrapeRoutes(db: Db, auth: express.RequestHandler, readAuth: express.RequestHandler) {
+export function scrapeRoutes(db: Db, spool: Spool, auth: express.RequestHandler, readAuth: express.RequestHandler) {
   const r = Router();
 
   r.post(
     "/scrapes",
     auth,
     express.json({ limit: "25mb" }),
-    handle(async (req, res) => {
-      const body = ScrapeUpload.parse(req.body);
-      const out = await db.transaction(async (tx) => {
-        const [run] = await tx.insert(scrapeRuns).values(body.run).returning({ id: scrapeRuns.id });
-        const rows = body.listings.map((l) => ({ ...l, runId: run!.id, site: body.run.site }));
-        for (let i = 0; i < rows.length; i += CHUNK) await tx.insert(scrapedListings).values(rows.slice(i, i + CHUNK));
-        return { id: run!.id, listings: rows.length };
-      });
-      res.status(201).json(out);
-    }),
+    handle((req, res) => spoolThenStore(spool, "scrapes", ScrapeUpload, req, res, () => storeScrape(db, req.body))),
   );
 
   r.get(

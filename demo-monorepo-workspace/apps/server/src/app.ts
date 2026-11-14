@@ -1,4 +1,6 @@
 import express from "express";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import cors from "cors";
 import { pinoHttp } from "pino-http";
 import type { Config } from "./env.js";
@@ -7,8 +9,14 @@ import { errorHandler, requireToken } from "./lib/http.js";
 import { ingestRoutes } from "./routes/ingest.js";
 import { sweepRoutes } from "./routes/sweeps.js";
 import { scrapeRoutes } from "./routes/scrapes.js";
+import { Spool } from "./lib/spool.js";
 
-export function createApp(db: Db, config: Pick<Config, "token" | "origins" | "PUBLIC_READS" | "LOG_LEVEL">) {
+// `spool`: where uploads are kept on disk before the database (index.ts passes SPOOL_DIR; tests get a temp dir)
+export function createApp(
+  db: Db,
+  config: Pick<Config, "token" | "origins" | "PUBLIC_READS" | "LOG_LEVEL">,
+  spool = new Spool(join(tmpdir(), "tcc-spool")),
+) {
   const app = express();
   app.disable("x-powered-by");
   app.use(pinoHttp({ level: config.LOG_LEVEL, redact: ["req.headers.authorization"], autoLogging: { ignore: (req) => req.url === "/health" } }));
@@ -22,8 +30,8 @@ export function createApp(db: Db, config: Pick<Config, "token" | "origins" | "PU
     res.type("text").send("ok");
   });
   app.use(ingestRoutes(db, auth, readAuth));
-  app.use(sweepRoutes(db, auth, readAuth));
-  app.use(scrapeRoutes(db, auth, readAuth));
+  app.use(sweepRoutes(db, spool, auth, readAuth));
+  app.use(scrapeRoutes(db, spool, auth, readAuth));
   app.use((_req, res) => {
     res.status(404).type("text").send("not found");
   });

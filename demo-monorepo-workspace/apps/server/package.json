@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "tsx --env-file-if-exists=.env.test --test test/*.test.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "spool:replay": "tsx --env-file-if-exists=.env src/replay.ts"
   },
   "dependencies": {
     "@tcc/contracts": "workspace:*",
