@@ -102,7 +102,82 @@ export type Listing = {
   scrapedAt: string;
 };
 
-export type IngestBatch = { id: string; receivedAt: string; kind: string; installId: string | null; label: string | null; extVersion: string | null; eventCount: number; bytes: number };
+export type IngestBatch = {
+  id: string;
+  receivedAt: string;
+  kind: string;
+  installId: string | null;
+  label: string | null;
+  extVersion: string | null;
+  bootId: string | null;
+  sequence: number | null;
+  eventCount: number;
+  bytes: number;
+};
+
+/** the request timeline the probe reports for a page or a resource (ms) */
+export type Timeline = {
+  protocol?: string;
+  redirect?: number;
+  dns?: number;
+  connect?: number;
+  tls?: number;
+  queue?: number;
+  ttfb?: number;
+  download?: number;
+  duration?: number;
+  reusedConnection?: boolean;
+  timingAllowed?: boolean;
+  transferSize?: number;
+  cached?: boolean;
+  serverTiming?: Record<string, number>;
+};
+export type PageLoad = {
+  installId: string | null;
+  tabId: number | null;
+  page: string | null;
+  navigatedAt: string;
+  nthInTab: number | string;
+  sincePrevNavMs: number | null;
+  sincePrevLoadMs: number | null;
+  firstForOrigin: boolean;
+  data: Timeline & { navType?: string; ttfb?: number; domContentLoaded?: number; load?: number; responseStart?: number };
+};
+export type Vital = { page: string | null; name: string; views: number; p50: number; p75: number; max: number };
+export type ResourceRow = {
+  url: string | null;
+  initiator: string | null;
+  requests: number;
+  firstTtfb: number | null;
+  laterTtfb: number | null;
+  firstDuration: number | null;
+  laterDuration: number | null;
+  firstConnect: number | null;
+  app: number | null;
+  db: number | null;
+  network: number | null;
+  avgBytes: number | null;
+  cachedShare: number | null;
+};
+export type UploadSequence = { installId: string | null; label: string | null; bootId: string; uploads: number; firstSeq: number; lastSeq: number; missing: number; firstAt: string; lastAt: string };
+
+export type HostBoot = {
+  source: string;
+  instanceId: string;
+  bootId: string;
+  firstAt: string;
+  lastAt: string;
+  batches: number;
+  firstSeq: number;
+  lastSeq: number;
+  missing: number;
+  duplicates: number;
+  restarts: number;
+  lastState: string | null;
+};
+export type HostSample = { source: string; instanceId: string; bootId: string; at: string; category: string; type: string; name: string; data: Record<string, unknown> };
+export type HostLifecycle = { source: string; instanceId: string; bootId: string; at: string; state: string; reason: string | null; uptimeMs: number | null };
+export type HostPoint = { resolution: "raw" | "minute"; instanceId: string; at: string; name: string; data: Record<string, number>; samples: number };
 export type IngestStat = { source: string; type: string; events: number; last_at: string };
 
 export const api = {
@@ -118,4 +193,12 @@ export const api = {
   },
   batches: () => get<IngestBatch[]>("/ingest/batches"),
   stats: () => get<IngestStat[]>("/ingest/stats"),
+  navigation: () => get<PageLoad[]>("/ingest/navigation?limit=200"),
+  vitals: () => get<Vital[]>("/ingest/vitals"),
+  resources: (initiator: string) => get<ResourceRow[]>(`/ingest/resources${initiator ? `?initiator=${initiator}` : ""}`),
+  sequences: () => get<UploadSequence[]>("/ingest/sequences"),
+  hostBoots: () => get<HostBoot[]>("/telemetry/host/boots"),
+  hostLatest: (minutes: number) => get<HostSample[]>(`/telemetry/host/latest?minutes=${minutes}`),
+  hostLifecycle: () => get<HostLifecycle[]>("/telemetry/host/lifecycle"),
+  hostSeries: (type: string, minutes: number) => get<HostPoint[]>(`/telemetry/host/series?type=${encodeURIComponent(type)}&minutes=${minutes}`),
 };

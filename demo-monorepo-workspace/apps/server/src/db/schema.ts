@@ -16,6 +16,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -38,12 +39,20 @@ export const ingestBatches = pgTable(
     extVersion: text("ext_version"),
     userAgent: text("user_agent"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
+    // extension 0.4+: service-worker start and its "stream" upload counter; a retry of an upload the
+    // server already has hits the unique index and is acknowledged without storing it twice
+    bootId: text("boot_id"),
+    sequence: integer("sequence"),
     eventCount: integer("event_count").notNull(),
     // jsonb drops whitespace and duplicate keys and reorders keys; the text column is the exact upload
     bodyText: text("body_text").notNull(),
     body: jsonb("body").notNull(),
   },
-  (t) => [index("ingest_batches_received_at_idx").on(t.receivedAt), index("ingest_batches_install_idx").on(t.installId)],
+  (t) => [
+    index("ingest_batches_received_at_idx").on(t.receivedAt),
+    index("ingest_batches_install_idx").on(t.installId),
+    uniqueIndex("ingest_batches_sequence_idx").on(t.installId, t.bootId, t.sequence).where(sql`boot_id IS NOT NULL AND sequence IS NOT NULL`),
+  ],
 );
 
 /** Every event of a batch, one row each, expanded by Postgres from the batch's jsonb. */
@@ -66,6 +75,107 @@ export const telemetryEvents = pgTable(
     data: jsonb("data").notNull(),
   },
   (t) => [index("telemetry_events_kind_idx").on(t.source, t.type), index("telemetry_events_batch_idx").on(t.batchId)],
+);
+
+// ─── Host telemetry (Node services measuring themselves) ────────────────────────────────────────────
+
+/** One HostTelemetryEnvelope. (source, instance, boot, sequence) is unique: a resend counts as a duplicate. */
+export const hostBatches = pgTable(
+  "host_batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    source: text("source").notNull(),
+    instanceId: text("instance_id").notNull(),
+    bootId: text("boot_id").notNull(),
+    sequence: integer("sequence").notNull(),
+    // the envelope's wall-clock timestamp
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
+    sampleCount: integer("sample_count").notNull(),
+    // how many times the same batch arrived again after it was stored
+    duplicates: integer("duplicates").notNull().default(0),
+    body: jsonb("body").notNull(),
+  },
+  (t) => [
+    uniqueIndex("host_batches_sequence_idx").on(t.source, t.instanceId, t.bootId, t.sequence),
+    index("host_batches_instance_idx").on(t.source, t.instanceId, t.sentAt),
+  ],
+);
+
+/** Every sample of a host batch. `name` is what it aggregates over (route, query), '' when nothing. */
+export const hostSamples = pgTable(
+  "host_samples",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => hostBatches.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    instanceId: text("instance_id").notNull(),
+    bootId: text("boot_id").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull(),
+    category: text("category").notNull(), // runtime | performance | lifecycle | other
+    type: text("type").notNull(),
+    name: text("name").notNull().default(""),
+    data: jsonb("data").notNull(),
+  },
+  (t) => [
+    index("host_samples_series_idx").on(t.source, t.instanceId, t.type, t.at),
+    index("host_samples_category_idx").on(t.category, t.at),
+    index("host_samples_batch_idx").on(t.batchId),
+  ],
+);
+
+/**
+ * One row per app event (POST /telemetry/events): the ERP's searches, list loads, snapshot builds. `ms`
+ * is copied out of data (its "ms", or "openMs"/"queryMs" when that's what the event measures) so
+ * percentiles per (service, source, type) don't parse jsonb. (source, instance, boot, sequence, idx) is
+ * unique: a resent batch inserts nothing.
+ */
+export const appEvents = pgTable(
+  "app_events",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    source: text("source").notNull(),
+    instanceId: text("instance_id").notNull(),
+    bootId: text("boot_id").notNull(),
+    sequence: integer("sequence").notNull(),
+    idx: integer("idx").notNull(),
+    service: text("service").notNull(),
+    eventSource: text("event_source").notNull(),
+    type: text("type").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull(),
+    ts: doublePrecision("ts").notNull(),
+    ms: doublePrecision("ms"),
+    userHash: text("user_hash"),
+    data: jsonb("data").notNull(),
+  },
+  (t) => [
+    uniqueIndex("app_events_batch_idx").on(t.source, t.instanceId, t.bootId, t.sequence, t.idx),
+    index("app_events_kind_idx").on(t.service, t.eventSource, t.type, t.at),
+    index("app_events_at_idx").on(t.at),
+  ],
+);
+
+/**
+ * Older host samples, one row per minute, instance, type and name: for every numeric field, its
+ * average, minimum and maximum over the minute ({ "p99Ms": { "avg": 4.1, "min": 2, "max": 9 } }).
+ * Lifecycle samples are never rolled up: they are events, not measurements.
+ */
+export const hostRollups = pgTable(
+  "host_rollups",
+  {
+    bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+    source: text("source").notNull(),
+    instanceId: text("instance_id").notNull(),
+    category: text("category").notNull(),
+    type: text("type").notNull(),
+    name: text("name").notNull().default(""),
+    samples: integer("samples").notNull(),
+    fields: jsonb("fields").$type<Record<string, { avg: number; min: number; max: number }>>().notNull(),
+  },
+  (t) => [uniqueIndex("host_rollups_key_idx").on(t.bucket, t.source, t.instanceId, t.type, t.name)],
 );
 
 // ─── Sweeps ─────────────────────────────────────────────────────────────────────────────────────────

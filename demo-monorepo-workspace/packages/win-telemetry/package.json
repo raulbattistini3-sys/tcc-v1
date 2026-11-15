@@ -1,0 +1,24 @@
+{
+  "name": "@tcc/win-telemetry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows observation for a Node service as a Node-API addon (process memory/CPU/handles/I/O, the job object, system memory/CPU, PDH counters, an ETW real-time session) turned into host-telemetry samples. The addon is optional: without it (or off Windows) the collector yields nothing.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@tcc/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "node-api-headers": "^1.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

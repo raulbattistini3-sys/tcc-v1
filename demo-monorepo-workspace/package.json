@@ -4,6 +4,10 @@
   "private": true,
   "description": "Records the thesis's sweeps, the WebExtension's telemetry uploads and the scraped store listings in Postgres, with a dashboard to browse them.",
   "packageManager": "pnpm@11.21.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -12,6 +16,7 @@
     "dev:server": "pnpm --filter @tcc/server dev",
     "dev:web": "pnpm --filter @tcc/web dev",
     "build": "pnpm --filter @tcc/web build",
+    "build:native": "pnpm --filter @tcc/win-telemetry build",
     "start": "pnpm --filter @tcc/server start",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @tcc/server test",

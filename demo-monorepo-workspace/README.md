@@ -5,6 +5,8 @@ pnpm workspace:
 
 ```
 packages/contracts   Zod schemas + TS types of every body the server accepts (shared by server, web, demo-webscraping)
+packages/host-telemetry  host telemetry for a Node service: memory, heap, GC, event loop, requests, queries, lifecycle
+packages/win-telemetry   Node-API addon + collector: Windows process/job/system counters, PDH, ETW (pnpm build:native)
 apps/server          Express 5 + Drizzle ORM (node-postgres): POST /ingest, /sweeps, /scrapes and their read routes
 apps/web             Vite + React + TS dashboard (CSS Modules, TanStack Query): sweeps, scraped listings, telemetry
 ```

@@ -34,7 +34,7 @@ describe("server", { skip: url ? false : "set TEST_DATABASE_URL to run the integ
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
   beforeEach(async () => {
-    await db.execute(sql`TRUNCATE ingest_batches, telemetry_events, sweep_runs, sweep_results, scrape_runs, scraped_listings CASCADE`);
+    await db.execute(sql`TRUNCATE ingest_batches, telemetry_events, host_batches, host_samples, host_rollups, sweep_runs, sweep_results, scrape_runs, scraped_listings CASCADE`);
   });
   after(async () => {
     await new Promise((r) => server.close(r));
@@ -140,6 +140,97 @@ describe("server", { skip: url ? false : "set TEST_DATABASE_URL to run the integ
         ["loaf/frame:1", "scheduler/decision:1", "scheduler/result:1"],
       );
     });
+
+    test("a resent upload (same bootId + sequence) is acknowledged but stored once; gaps show up", async () => {
+      const seq = (n: number) => ({ ...stream, bootId: "boot-a", sequence: n });
+      assert.equal((await postJson("/ingest", seq(0))).status, 204);
+      assert.equal((await postJson("/ingest", seq(0))).status, 204);
+      assert.equal((await postJson("/ingest", seq(2))).status, 204);
+      const batches = (await (await call("/ingest/batches")).json()) as unknown[];
+      assert.equal(batches.length, 2);
+      const seqs = (await (await call("/ingest/sequences")).json()) as { uploads: number; missing: number }[];
+      assert.deepEqual(seqs.map((s) => [s.uploads, s.missing]), [[2, 1]]);
+    });
+
+    test("navigation, vitals and resources come back from the probe's events", async () => {
+      const t0 = 1_793_000_000_000;
+      const ev = (type: string, data: Record<string, unknown>, ts = 100) => ({ source: "ext-probe", type, ts, data });
+      const nav = (timeOrigin: number, extra: Record<string, unknown>) => ({
+        tabId: 3, page: "http://localhost:5173/clientes", world: "extension-main", timeOrigin,
+        events: [
+          ev("page", { navType: "navigate", dns: 2, tcp: 3, tls: 0, ttfb: 40, download: 5, load: 900, serverTiming: { app: 30 }, ...extra }),
+          ev("vital", { name: "LCP", value: 800 }, 200),
+          ev("resource", { url: "http://localhost:3000/api/clientes", initiator: "fetch", ttfb: timeOrigin === t0 ? 120 : 20, duration: 130, connect: 4, serverTiming: { app: 15, db: 9 } }, 300),
+        ],
+      });
+      await postJson("/ingest", { ...stream, batches: [nav(t0, {}), nav(t0 + 5000, { navType: "reload" })] });
+      const loads = (await (await call("/ingest/navigation")).json()) as { nthInTab: string; sincePrevNavMs: number; sincePrevLoadMs: number; firstForOrigin: boolean }[];
+      assert.equal(loads.length, 2);
+      assert.equal(Number(loads[0]!.nthInTab), 2);
+      assert.equal(loads[0]!.sincePrevNavMs, 5000);
+      assert.equal(loads[0]!.sincePrevLoadMs, 4100);
+      assert.deepEqual(loads.map((l) => l.firstForOrigin), [false, true]);
+      const vitals = (await (await call("/ingest/vitals")).json()) as { name: string; views: number; p75: number }[];
+      assert.deepEqual(vitals.map((v) => [v.name, v.views, v.p75]), [["LCP", 2, 800]]);
+      const res = (await (await call("/ingest/resources")).json()) as { requests: number; firstTtfb: number; laterTtfb: number; network: number }[];
+      assert.equal(res[0]!.requests, 2);
+      assert.equal(res[0]!.firstTtfb, 120);
+      assert.equal(res[0]!.laterTtfb, 20);
+      assert.equal(res[0]!.network, 55); // ((120 - 15) + (20 - 15)) / 2
+    });
+  });
+
+  describe("/telemetry/host", () => {
+    const env = (sequence: number, bootId = "boot-1", samples: unknown[] = []) => ({
+      version: 1, source: "sample-erp-api", instanceId: "api-01", bootId, sequence, timestamp: new Date(Date.now() - 1000 * (10 - sequence)).toISOString(),
+      samples: [
+        { type: "process.memory", rssBytes: 145752064, heapUsedBytes: 68272128, externalBytes: 8120320 },
+        { type: "event-loop.delay", meanMs: 3.4, p99Ms: 8.1 },
+        ...samples,
+      ],
+    });
+
+    test("stores the samples by category; a resend counts as a duplicate", async () => {
+      assert.equal((await postJson("/telemetry/host", env(0, "boot-1", [{ type: "lifecycle", state: "started" }, { type: "custom.thing", category: "runtime", n: 1 }]))).status, 204);
+      assert.equal((await postJson("/telemetry/host", env(0))).status, 204);
+      const rows = await db.execute<{ category: string; type: string }>(sql`SELECT category, type FROM host_samples ORDER BY type`);
+      assert.deepEqual(rows.rows.map((r) => `${r.category}/${r.type}`), ["runtime/custom.thing", "performance/event-loop.delay", "lifecycle/lifecycle", "runtime/process.memory"]);
+      const latest = (await (await call("/telemetry/host/latest?category=runtime")).json()) as { type: string }[];
+      assert.deepEqual(latest.map((l) => l.type).sort(), ["custom.thing", "process.memory"]);
+    });
+
+    test("a known sample type with wrong fields, or a bad envelope, is a 400", async () => {
+      assert.equal((await postJson("/telemetry/host", env(0, "b", [{ type: "process.memory", rssBytes: "a lot" }]))).status, 400);
+      assert.equal((await postJson("/telemetry/host", { ...env(0), version: 2 })).status, 400);
+      assert.equal((await postJson("/telemetry/host", { ...env(0), timestamp: "yesterday" })).status, 400);
+    });
+
+    test("boots report missing batches, duplicates and restarts; lifecycle lists the restart", async () => {
+      await postJson("/telemetry/host", env(0, "boot-1", [{ type: "lifecycle", state: "started" }]));
+      await postJson("/telemetry/host", env(2, "boot-1"));
+      await postJson("/telemetry/host", env(2, "boot-1"));
+      await postJson("/telemetry/host", env(5, "boot-2", [{ type: "lifecycle", state: "ready" }]));
+      const boots = (await (await call("/telemetry/host/boots")).json()) as { bootId: string; batches: number; missing: number; duplicates: number; restarts: number; lastState: string }[];
+      const b1 = boots.find((b) => b.bootId === "boot-1")!;
+      const b2 = boots.find((b) => b.bootId === "boot-2")!;
+      assert.deepEqual([b1.batches, b1.missing, b1.duplicates, b1.restarts, b1.lastState], [2, 1, 1, 0, "started"]);
+      assert.deepEqual([b2.missing, b2.restarts, b2.lastState], [5, 1, "ready"]);
+      const life = (await (await call("/telemetry/host/lifecycle")).json()) as { state: string }[];
+      assert.deepEqual(life.map((l) => l.state).sort(), ["ready", "restarted", "started"]);
+    });
+
+    test("series returns raw samples, and old ones come back as minute rollups after the rollup", async () => {
+      await postJson("/telemetry/host", env(0, "boot-1", [{ type: "lifecycle", state: "started" }]));
+      await db.execute(sql`UPDATE host_samples SET at = now() - interval '2 hours'`);
+      const { rollupHostSamples } = await import("../src/lib/host-store.js");
+      assert.equal(await rollupHostSamples(db, 1), 2);
+      const kept = await db.execute<{ type: string }>(sql`SELECT type FROM host_samples`);
+      assert.deepEqual(kept.rows.map((r) => r.type), ["lifecycle"]);
+      const series = (await (await call("/telemetry/host/series?type=event-loop.delay&minutes=180")).json()) as { resolution: string; data: { p99Ms: number } }[];
+      assert.equal(series.length, 1);
+      assert.equal(series[0]!.resolution, "minute");
+      assert.equal(Number(series[0]!.data.p99Ms), 8.1);
+    });
   });
 
   describe("/sweeps", () => {
@@ -231,7 +322,7 @@ describe("server", { skip: url ? false : "set TEST_DATABASE_URL to run the integ
   });
 
   test("reads need the token too (PUBLIC_READS=0)", async () => {
-    for (const path of ["/sweeps", "/scrapes", "/listings", "/ingest/batches", "/ingest/stats"]) {
+    for (const path of ["/sweeps", "/scrapes", "/listings", "/ingest/batches", "/ingest/stats", "/ingest/navigation", "/ingest/vitals", "/ingest/resources", "/ingest/sequences", "/telemetry/host/boots", "/telemetry/host/latest", "/telemetry/host/lifecycle"]) {
       assert.equal((await call(path, { token: null })).status, 401, path);
     }
   });

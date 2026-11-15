@@ -1,0 +1,22 @@
+{
+  "name": "@tcc/host-telemetry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "What a Node service measures about itself (memory, GC, event-loop delay, request and query durations, lifecycle), batched into HostTelemetryEnvelopes for POST /telemetry/host, plus the Server-Timing middleware. TS source only, no build; no runtime dependencies.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@tcc/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

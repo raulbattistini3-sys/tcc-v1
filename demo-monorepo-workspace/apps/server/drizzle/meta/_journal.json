@@ -8,6 +8,20 @@
       "when": 1794147833815,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794725425194,
+      "tag": "0001_host_telemetry",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794737619593,
+      "tag": "0002_app_events",
+      "breakpoints": true
     }
   ]
 }

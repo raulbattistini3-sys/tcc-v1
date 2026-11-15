@@ -43,7 +43,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     upload.backoffMs = 0;
     upload.lastError = "";
     if (settings.uploadEnabled) scheduleFlush(0);
-    else outbox.length = 0;
+    else {
+      outbox.length = 0;
+      pending = null;
+    }
     // The collector origin is excluded from the live sites; re-derive them.
     syncContentScripts();
   }
@@ -142,33 +145,50 @@ async function post(body) {
   if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text().catch(() => "")}`.trim());
 }
 
+// bootId: this service worker's start (a new one after every restart of the worker, which MV3 does
+// often); sequence: its "stream" upload counter. The server stores a (installId, bootId, sequence)
+// once, so a retry after a timeout whose first attempt did arrive is not counted twice, and a gap in
+// the sequence is an upload that never arrived. timestamp: wall clock, for correlation only.
+const bootId = crypto.randomUUID();
+let nextSequence = 0;
+
 const envelope = () => ({
   v: 1,
   installId,
   label: settings.label,
   ext: chrome.runtime.getManifest().version,
   ua: navigator.userAgent,
+  bootId,
   sentAt: Date.now(),
+  timestamp: new Date().toISOString(),
 });
 
+/**
+ * The upload in the air or waiting to be retried. It is retried exactly as it was (same sequence,
+ * same batches) until it gets through; what arrives meanwhile waits in the outbox for the next one.
+ * @type {{ sequence: number, batches: OutItem[] } | null}
+ */
+let pending = null;
+
 async function flush() {
-  if (outbox.length === 0 || !settings.uploadEnabled || !settings.collectorUrl) return;
+  if ((!pending && outbox.length === 0) || !settings.uploadEnabled || !settings.collectorUrl) return;
   upload.inFlight = true;
-  const batches = outbox.splice(0, outbox.length);
+  if (!pending) pending = { sequence: nextSequence++, batches: outbox.splice(0, outbox.length) };
+  const { sequence, batches } = pending;
   try {
-    await post({ ...envelope(), kind: "stream", batches });
+    await post({ ...envelope(), sequence, kind: "stream", batches });
+    pending = null;
     upload.sent += batches.reduce((n, b) => n + b.events.length, 0);
     upload.lastOkAt = Date.now();
     upload.lastError = "";
     upload.backoffMs = 0;
   } catch (err) {
-    outbox.unshift(...batches);
     upload.lastError = String(/** @type {Error} */ (err).message ?? err);
     upload.backoffMs = Math.min(MAX_BACKOFF_MS, Math.max(2000, upload.backoffMs * 2));
   } finally {
     upload.inFlight = false;
   }
-  if (outbox.length) scheduleFlush(FLUSH_MS);
+  if (pending || outbox.length) scheduleFlush(FLUSH_MS);
 }
 
 // ---------- live sites: content scripts for opted-in origins ----------
@@ -218,7 +238,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     await ready;
     if (msg?.type === "status") {
-      sendResponse({ settings, installId, upload: { ...upload, queued: outboxEvents() }, sites: await liveSites() });
+      sendResponse({ settings, installId, upload: { ...upload, queued: outboxEvents() + (pending?.batches.reduce((n, b) => n + b.events.length, 0) ?? 0), sequence: nextSequence, bootId }, sites: await liveSites() });
       return;
     }
     if (msg?.type === "test") {
@@ -228,7 +248,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const diag = {
           uploadEnabled: settings.uploadEnabled,
           collectorUrl: settings.collectorUrl,
-          upload: { ...upload, queued: outboxEvents() },
+          upload: { ...upload, queued: outboxEvents() + (pending?.batches.reduce((n, b) => n + b.events.length, 0) ?? 0), sequence: nextSequence, bootId },
           tabs: [...tabs].map(([tabId, log]) => ({ tabId, page: log.page, events: log.events.length })),
           liveSites: await liveSites(),
         };
