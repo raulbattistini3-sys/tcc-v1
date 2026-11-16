@@ -274,15 +274,28 @@ static napi_value ProcessInfo(napi_env env, napi_callback_info info) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// jobInfo(): the job object this process runs in (network's supervisor puts its children in one), or null
+// jobInfo(name?): the job object this process runs in (network's supervisor puts its children in one), or null.
+// With a name, the named job instead (the sample-erp launcher names each service's memory-limit job and passes the
+// name down as WIN_TELEMETRY_JOB): a Bun executable puts itself in a kill-on-close job of its own, nested under
+// the launcher's, so the job the process sees first is Bun's, without the limit. A name reaches the right one
+// whatever the nesting, from the service and from any child it hands the name to.
 
-static napi_value JobInfo(napi_env env, napi_callback_info) {
-  BOOL inJob = FALSE;
-  if (!IsProcessInJob(GetCurrentProcess(), nullptr, &inJob) || !inJob) return nullValue(env);
+static napi_value JobInfo(napi_env env, napi_callback_info info) {
+  Args a(env, info);
+  std::string name;
+  HANDLE job = nullptr;  // nullptr: the calling process's own (innermost) job
+  if (a.argc > 0 && getString(env, a.argv[0], name) && !name.empty()) {
+    job = OpenJobObjectW(JOB_OBJECT_QUERY, FALSE, widen(name).c_str());
+    if (!job) return nullValue(env);
+  } else {
+    BOOL inJob = FALSE;
+    if (!IsProcessInJob(GetCurrentProcess(), nullptr, &inJob) || !inJob) return nullValue(env);
+  }
 
   Obj o(env);
+  if (!name.empty()) o.str("name", name);
   JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION acc;
-  if (QueryInformationJobObject(nullptr, JobObjectBasicAndIoAccountingInformation, &acc, sizeof acc, nullptr)) {
+  if (QueryInformationJobObject(job, JobObjectBasicAndIoAccountingInformation, &acc, sizeof acc, nullptr)) {
     const auto& b = acc.BasicInfo;
     o.num("userMs", (double)b.TotalUserTime.QuadPart / 10000.0)
         .num("kernelMs", (double)b.TotalKernelTime.QuadPart / 10000.0)
@@ -296,27 +309,37 @@ static napi_value JobInfo(napi_env env, napi_callback_info) {
         .num("ioWriteOps", (double)acc.IoInfo.WriteOperationCount);
   }
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION ext;
-  if (QueryInformationJobObject(nullptr, JobObjectExtendedLimitInformation, &ext, sizeof ext, nullptr)) {
+  if (QueryInformationJobObject(job, JobObjectExtendedLimitInformation, &ext, sizeof ext, nullptr)) {
     o.num("peakProcessMemoryBytes", (double)ext.PeakProcessMemoryUsed)
         .num("peakJobMemoryBytes", (double)ext.PeakJobMemoryUsed)
         .num("limitFlags", ext.BasicLimitInformation.LimitFlags)
         .boolean("killOnClose", (ext.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE) != 0);
     if (ext.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_JOB_MEMORY)
       o.num("jobMemoryLimitBytes", (double)ext.JobMemoryLimit);
+    // per process (what the sample-erp launcher sets on each service), as opposed to the whole job
+    if (ext.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_PROCESS_MEMORY)
+      o.num("processMemoryLimitBytes", (double)ext.ProcessMemoryLimit);
   }
-  struct {
-    JOBOBJECT_BASIC_PROCESS_ID_LIST list;
-    ULONG_PTR more[63];
-  } ids;
-  memset(&ids, 0, sizeof ids);
-  if (QueryInformationJobObject(nullptr, JobObjectBasicProcessIdList, &ids, sizeof ids, nullptr) ||
+  // the id list is variable length: read it from a buffer sized for 64 ids rather than past the struct's
+  // one-element array (undefined behaviour the optimiser is free to turn into garbage)
+  constexpr DWORD kMaxIds = 64;
+  alignas(JOBOBJECT_BASIC_PROCESS_ID_LIST) unsigned char buf[sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) +
+                                                            (kMaxIds - 1) * sizeof(ULONG_PTR)] = {};
+  auto* list = reinterpret_cast<JOBOBJECT_BASIC_PROCESS_ID_LIST*>(buf);
+  if (QueryInformationJobObject(job, JobObjectBasicProcessIdList, buf, sizeof buf, nullptr) ||
       GetLastError() == ERROR_MORE_DATA) {
-    DWORD n = ids.list.NumberOfProcessIdsInList;
+    DWORD n = list->NumberOfProcessIdsInList < kMaxIds ? list->NumberOfProcessIdsInList : kMaxIds;
+    const unsigned char* first = buf + offsetof(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList);
     napi_value arr;
     N.napi_create_array_with_length(env, n, &arr);
-    for (DWORD i = 0; i < n; i++) N.napi_set_element(env, arr, i, number(env, (double)ids.list.ProcessIdList[i]));
-    o.set("pids", arr).boolean("pidsTruncated", ids.list.NumberOfAssignedProcesses > n);
+    for (DWORD i = 0; i < n; i++) {
+      ULONG_PTR pid;
+      memcpy(&pid, first + i * sizeof(ULONG_PTR), sizeof pid);
+      N.napi_set_element(env, arr, i, number(env, (double)pid));
+    }
+    o.set("pids", arr).boolean("pidsTruncated", list->NumberOfAssignedProcesses > n);
   }
+  if (job) CloseHandle(job);
   return o.value;
 }
 
