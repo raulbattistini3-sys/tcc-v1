@@ -50,6 +50,10 @@ export interface JobInfo {
   peakProcessMemoryBytes?: number;
   peakJobMemoryBytes?: number;
   jobMemoryLimitBytes?: number;
+  /** JOB_OBJECT_LIMIT_PROCESS_MEMORY: what each process of the job may commit */
+  processMemoryLimitBytes?: number;
+  /** set when read by name */
+  name?: string;
   limitFlags?: number;
   killOnClose?: boolean;
   pids?: number[];
@@ -107,7 +111,8 @@ export interface EtwDrain {
 export interface WinNative {
   info(): { napiVersion: number; pid: number; elevated: boolean; compiler: string };
   processInfo(pid?: number): ProcessInfo | null;
-  jobInfo(): JobInfo | null;
+  /** the process's own (innermost) job, or the named one (see WindowsCollectorOptions.jobName) */
+  jobInfo(name?: string): JobInfo | null;
   systemInfo(): SystemInfo;
   isElevated(): boolean;
   pdhOpen(paths: string[]): number;
@@ -184,8 +189,14 @@ export function nativeLoadError(): string | undefined {
 export interface WindowsCollectorOptions {
   /** default: loadNative() */
   native?: WinNative | null;
+  /** include win.process, this process (default true); off for a helper that reports its job for another */
+  process?: boolean;
   /** include win.job when the process is in a job (default true) */
   job?: boolean;
+  /** read this named job rather than the innermost one (default: WIN_TELEMETRY_JOB). The sample-erp launcher names
+   *  each service's memory-limit job and passes the name down; a Bun executable sits in a kill-on-close job of its
+   *  own beneath it, so without the name win.job would describe Bun's job and show no limit. */
+  jobName?: string;
   /** include win.system (default true) */
   system?: boolean;
   /** PDH counters as label -> English path, e.g. { diskQueue: "\\PhysicalDisk(_Total)\\Current Disk Queue Length" } */
@@ -210,6 +221,7 @@ const delta = (now: number | undefined, prev: number | undefined) =>
 
 export function createWindowsCollector(opts: WindowsCollectorOptions = {}): WindowsCollector {
   const native = opts.native === undefined ? loadNative() : opts.native;
+  const jobName = opts.jobName ?? (process.env.WIN_TELEMETRY_JOB?.trim() || undefined);
   const onError = opts.onError ?? (() => {});
   const etwState: { session?: string; error?: string } = {};
   if (!native) {
@@ -277,7 +289,7 @@ export function createWindowsCollector(opts: WindowsCollectorOptions = {}): Wind
     const samples: TelemetrySample[] = [];
     const cpuPct = (ms: number | undefined) => (ms === undefined || intervalMs <= 0 ? undefined : round((ms / intervalMs / processors) * 100));
 
-    const p = native!.processInfo();
+    const p = opts.process === false ? null : native!.processInfo();
     if (p) {
       samples.push({
         type: "win.process",
@@ -303,7 +315,7 @@ export function createWindowsCollector(opts: WindowsCollectorOptions = {}): Wind
     }
 
     if (opts.job !== false) {
-      const j = native!.jobInfo();
+      const j = native!.jobInfo(jobName);
       if (j) {
         samples.push({
           type: "win.job",
@@ -314,8 +326,11 @@ export function createWindowsCollector(opts: WindowsCollectorOptions = {}): Wind
           terminatedProcesses: j.terminatedProcesses,
           peakJobMemoryBytes: j.peakJobMemoryBytes,
           peakProcessMemoryBytes: j.peakProcessMemoryBytes,
+          jobMemoryLimitBytes: j.jobMemoryLimitBytes,
+          processMemoryLimitBytes: j.processMemoryLimitBytes,
           killOnClose: j.killOnClose,
           pids: j.pids,
+          ...(j.name ? { jobName: j.name } : {}),
           ...(prevJob
             ? {
                 cpuPct: cpuPct(delta((j.kernelMs ?? 0) + (j.userMs ?? 0), (prevJob.kernelMs ?? 0) + (prevJob.userMs ?? 0))),
